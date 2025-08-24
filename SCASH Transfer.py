@@ -158,40 +158,33 @@ def write_address_balance_csv(address, balance):
         if not already_exists:
             writer.writerow([address, balance])
 
-def auto_query_mode(start_height, interval=1):
+def auto_query_mode(start_height, end_height=None, interval=0.1):
     height = start_height
     address_balance_set = set()
-    address_balance_dict = dict()
     while True:
+        if end_height is not None and height > end_height:
+            print("已達結束區塊高度，結束自動查詢模式。")
+            break
         print(f"\n查詢區塊高度: {height}")
-        result = process_block(height, address_balance_set, address_balance_dict)
+        result = process_block(height, address_balance_set)
         if result is False:
             print("查詢失敗或無法繼續，結束自動查詢模式。")
             break
-        # 每查到新地址即時寫入
-        for addr in list(address_balance_dict.keys()):
-            write_address_balance_csv(addr, address_balance_dict[addr])
-            del address_balance_dict[addr]
         height += 1
         time.sleep(interval)
 
 def manual_query_mode():
     address_balance_set = set()
-    address_balance_dict = dict()
     while True:
         user_input = input("\n請輸入區塊高度、地址或TxID (輸入 exit 結束): ").strip()
         if user_input.lower() == "exit":
             break
         if user_input.isdigit():
-            process_block(int(user_input), address_balance_set, address_balance_dict)
-            # 每查到新地址即時寫入
-            for addr in list(address_balance_dict.keys()):
-                write_address_balance_csv(addr, address_balance_dict[addr])
-                del address_balance_dict[addr]
+            process_block(int(user_input), address_balance_set)
         elif user_input.startswith("scash1"):
             if user_input not in address_balance_set:
                 balance = get_address_balance(user_input)
-                if balance is not None:
+                if balance is not None and balance >= THRESHOLD:
                     address_balance_set.add(user_input)
                     write_address_balance_csv(user_input, balance)
             process_address(user_input)
@@ -200,7 +193,7 @@ def manual_query_mode():
         else:
             print("輸入格式錯誤，請重新輸入。")
 
-def process_block(block_height, address_balance_set=None, address_balance_dict=None):
+def process_block(block_height, address_balance_set=None):
     try:
         block_url = f"{BASE_URL}/?search={block_height}"
         soup = fetch_html(block_url)
@@ -222,12 +215,12 @@ def process_block(block_height, address_balance_set=None, address_balance_dict=N
             if amount < THRESHOLD:
                 continue
             # 查詢地址餘額並記錄唯一地址
-            if address_balance_set is not None and address_balance_dict is not None:
+            if address_balance_set is not None:
                 if address not in address_balance_set:
                     balance = get_address_balance(address)
-                    if balance is not None:
+                    if balance is not None and balance >= THRESHOLD:
                         address_balance_set.add(address)
-                        address_balance_dict[address] = balance
+                        write_address_balance_csv(address, balance)
             # 寫入轉帳紀錄
             rows_to_write.append([
                 block_height, txid, address, amount, time_str
@@ -259,15 +252,20 @@ def process_txid(txid):
 
 def main():
     print("選擇模式：")
-    print("1. 自動查詢模式 (從起始區塊開始，直到查詢失敗自動結束)")
+    print("1. 自動查詢模式 (可指定起始/結束區塊高度，結束高度預設查不到為止)")
     print("2. 手動查詢模式 (輸入區塊高度/地址/TxID)")
     mode = input("請輸入模式編號 (1/2): ").strip()
     if mode == "1":
         start = input("請輸入起始區塊高度 (預設 1): ").strip()
-        interval = input("請輸入查詢間隔秒數 (預設 1): ").strip()
+        end = input("請輸入結束區塊高度 (留空則查到失敗為止): ").strip()
+        interval = input("請輸入查詢間隔秒數 (預設 0.1): ").strip()
         start_height = int(start) if start.isdigit() else 1
-        interval_sec = int(interval) if interval.isdigit() else 1
-        auto_query_mode(start_height, interval_sec)
+        end_height = int(end) if end.isdigit() else None
+        try:
+            interval_sec = float(interval) if interval else 0.1
+        except ValueError:
+            interval_sec = 0.1
+        auto_query_mode(start_height, end_height, interval_sec)
     elif mode == "2":
         manual_query_mode()
     else:
