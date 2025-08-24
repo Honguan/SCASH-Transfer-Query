@@ -144,20 +144,28 @@ def write_address_balance_csv(address, balance):
     if balance < THRESHOLD:
         return
     file_exists = os.path.isfile(ADDRESS_BALANCE_FILE)
-    already_exists = False
     rows = []
+    updated = False
     if file_exists:
         with open(ADDRESS_BALANCE_FILE, mode='r', encoding='utf-8') as f:
             reader = csv.reader(f)
             header = next(reader, None)
             for row in reader:
                 if row and row[0] == address:
-                    already_exists = True
+                    # 若已存在且餘額不同則更新
+                    if float(row[1]) != float(balance):
+                        rows.append([address, str(balance)])
+                        updated = True
+                    else:
+                        rows.append(row)
                 else:
                     rows.append(row)
-    if not already_exists:
+    if not file_exists or (file_exists and not any(r[0] == address for r in rows)):
         rows.append([address, str(balance)])
+        updated = True
+    if updated or not file_exists:
         # 依餘額排序
+        rows = [r for r in rows if len(r) == 2]
         rows.sort(key=lambda x: float(x[1]), reverse=True)
         with open(ADDRESS_BALANCE_FILE, mode='w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
