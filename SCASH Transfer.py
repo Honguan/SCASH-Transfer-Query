@@ -2,8 +2,10 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import sys
+import csv
+import os
 
-BLOCK_HEIGHT = 89876
+BLOCK_HEIGHT = 89908
 THRESHOLD = 10  # SCASH 大額轉帳閾值，單位 SCASH
 BASE_URL = "https://scash.one"
 
@@ -85,18 +87,28 @@ def main():
     block_url = f"{BASE_URL}/?search={BLOCK_HEIGHT}"
     soup = fetch_html(block_url)
     total_amount = get_total_output_amount(soup)
-    print(f"找到總輸出金額: {total_amount} SCASH")
-    txid = find_txid_by_amount(soup, total_amount)
-    if not txid:
-        print("未找到對應的 txid，無法查詢地址")
+    if total_amount < THRESHOLD:
+        print(f"總輸出金額 {total_amount} SCASH 未達閾值 {THRESHOLD} SCASH，跳過後續查詢。")
         return
-    print(f"定位到總輸出金額對應的 TxID: {txid}  金額: {total_amount} SCASH")
-    outputs = get_tx_outputs(txid)
-    for address, amount in outputs:
-        print(f"地址: {address}  轉帳金額: {amount} SCASH")
-        balance = get_address_balance(address)
-        if balance is not None:
-            print(f"地址 {address} 目前持有 SCASH: {balance}")
+    else:
+        print(f"區塊高度: {BLOCK_HEIGHT}")
+        txid = find_txid_by_amount(soup, total_amount)
+        if not txid:
+            print("未找到對應的 txid，無法查詢地址")
+            return
+        print(f"轉帳 TxID: {txid}  金額: {total_amount} SCASH")
+        outputs = get_tx_outputs(txid)
+        csv_file = "scash_transfer_records.csv"
+        file_exists = os.path.isfile(csv_file)
+        with open(csv_file, mode='a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["Block Height", "TxID", "Total Amount", "Address", "Balance"])
+            for address, amount in outputs:
+                balance = get_address_balance(address)
+                if balance is not None and balance >= THRESHOLD:
+                    print(f"地址 {address} 目前持有 SCASH: {balance}")
+                    writer.writerow([BLOCK_HEIGHT, txid, total_amount, address, balance])
 
 if __name__ == "__main__":
     main()
