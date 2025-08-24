@@ -145,18 +145,24 @@ def write_address_balance_csv(address, balance):
         return
     file_exists = os.path.isfile(ADDRESS_BALANCE_FILE)
     already_exists = False
+    rows = []
     if file_exists:
         with open(ADDRESS_BALANCE_FILE, mode='r', encoding='utf-8') as f:
-            for row in csv.reader(f):
+            reader = csv.reader(f)
+            header = next(reader, None)
+            for row in reader:
                 if row and row[0] == address:
                     already_exists = True
-                    break
-    with open(ADDRESS_BALANCE_FILE, mode='a', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        if not file_exists:
+                else:
+                    rows.append(row)
+    if not already_exists:
+        rows.append([address, str(balance)])
+        # 依餘額排序
+        rows.sort(key=lambda x: float(x[1]), reverse=True)
+        with open(ADDRESS_BALANCE_FILE, mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
             writer.writerow(["Address", "Balance"])
-        if not already_exists:
-            writer.writerow([address, balance])
+            writer.writerows(rows)
 
 def auto_query_mode(start_height, end_height=None, interval=0.1):
     height = start_height
