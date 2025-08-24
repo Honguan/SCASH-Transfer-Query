@@ -11,6 +11,7 @@ BLOCK_HEIGHT = 1  # 指定區塊高度
 THRESHOLD = 500  # SCASH 大額轉帳閾值，單位 SCASH
 BASE_URL = "https://scash.one"
 CSV_FILE = "scash_transfer_records.csv"
+ADDRESS_BALANCE_FILE = "scash_address_balances.csv"
 
 def fetch_html(url):
     try:
@@ -129,41 +130,77 @@ def get_address_balance(address):
         return None
     return float(match.group(1))
 
-def write_to_csv(rows, file_exists):
+def write_transfer_csv(rows, file_exists):
     with open(CSV_FILE, mode='a', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow([
-                "Block Height", "TxID", "Total Amount", "Address", "Balance", "Transfer Time", "Write Time"
+                "Block Height", "TxID", "Address", "Amount", "Transfer Time"
             ])
         writer.writerows(rows)
 
+def write_address_balance_csv(address, balance):
+    # 僅寫入單一新查詢的地址，且不重複，且餘額需大於等於 THRESHOLD
+    if balance < THRESHOLD:
+        return
+    file_exists = os.path.isfile(ADDRESS_BALANCE_FILE)
+    already_exists = False
+    if file_exists:
+        with open(ADDRESS_BALANCE_FILE, mode='r', encoding='utf-8') as f:
+            for row in csv.reader(f):
+                if row and row[0] == address:
+                    already_exists = True
+                    break
+    with open(ADDRESS_BALANCE_FILE, mode='a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["Address", "Balance"])
+        if not already_exists:
+            writer.writerow([address, balance])
+
 def auto_query_mode(start_height, interval=1):
     height = start_height
+    address_balance_set = set()
+    address_balance_dict = dict()
     while True:
         print(f"\n查詢區塊高度: {height}")
-        result = process_block(height)
+        result = process_block(height, address_balance_set, address_balance_dict)
         if result is False:
             print("查詢失敗或無法繼續，結束自動查詢模式。")
             break
+        # 每查到新地址即時寫入
+        for addr in list(address_balance_dict.keys()):
+            write_address_balance_csv(addr, address_balance_dict[addr])
+            del address_balance_dict[addr]
         height += 1
         time.sleep(interval)
 
 def manual_query_mode():
+    address_balance_set = set()
+    address_balance_dict = dict()
     while True:
         user_input = input("\n請輸入區塊高度、地址或TxID (輸入 exit 結束): ").strip()
         if user_input.lower() == "exit":
             break
         if user_input.isdigit():
-            process_block(int(user_input))
+            process_block(int(user_input), address_balance_set, address_balance_dict)
+            # 每查到新地址即時寫入
+            for addr in list(address_balance_dict.keys()):
+                write_address_balance_csv(addr, address_balance_dict[addr])
+                del address_balance_dict[addr]
         elif user_input.startswith("scash1"):
+            if user_input not in address_balance_set:
+                balance = get_address_balance(user_input)
+                if balance is not None:
+                    address_balance_set.add(user_input)
+                    write_address_balance_csv(user_input, balance)
             process_address(user_input)
         elif re.fullmatch(r"[0-9a-fA-F]{64}", user_input):
             process_txid(user_input)
         else:
             print("輸入格式錯誤，請重新輸入。")
 
-def process_block(block_height):
+def process_block(block_height, address_balance_set=None, address_balance_dict=None):
     try:
         block_url = f"{BASE_URL}/?search={block_height}"
         soup = fetch_html(block_url)
@@ -181,16 +218,22 @@ def process_block(block_height):
         outputs = get_tx_outputs(txid)
         file_exists = os.path.isfile(CSV_FILE)
         rows_to_write = []
-        write_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         for address, amount in outputs:
-            balance = get_address_balance(address)
-            if balance is not None and balance >= THRESHOLD:
-                print(f"地址 {address} 目前持有 SCASH: {balance}")
-                rows_to_write.append([
-                    block_height, txid, total_amount, address, balance, time_str, write_time
-                ])
+            if amount < THRESHOLD:
+                continue
+            # 查詢地址餘額並記錄唯一地址
+            if address_balance_set is not None and address_balance_dict is not None:
+                if address not in address_balance_set:
+                    balance = get_address_balance(address)
+                    if balance is not None:
+                        address_balance_set.add(address)
+                        address_balance_dict[address] = balance
+            # 寫入轉帳紀錄
+            rows_to_write.append([
+                block_height, txid, address, amount, time_str
+            ])
         if rows_to_write:
-            write_to_csv(rows_to_write, file_exists)
+            write_transfer_csv(rows_to_write, file_exists)
         else:
             print("沒有符合條件的地址，未寫入任何資料。")
         return True
