@@ -5,7 +5,7 @@ import sys
 import csv
 import os
 
-BLOCK_HEIGHT = 89908
+BLOCK_HEIGHT = 32186  # 指定區塊高度
 THRESHOLD = 10  # SCASH 大額轉帳閾值，單位 SCASH
 BASE_URL = "https://scash.one"
 
@@ -31,25 +31,65 @@ def get_total_output_amount(soup):
         print("無法找到金額區塊")
         sys.exit()
     text = div.get_text(separator=" ", strip=True)
-    match = re.search(r"([\d\.]+)\s*SCASH", text)
+    match = re.search(r"([\d'\.]+)\s*SCASH", text)
     if not match:
         print("無法解析 SCASH 數值")
         sys.exit()
-    return float(match.group(1))
+    number_str = match.group(1).replace("'", "")  # 移除千分位撇號
+    return float(number_str)
 
 def find_txid_by_amount(soup, total_amount):
-    badges = soup.find_all("span", class_=lambda x: x and "badge" in x and "bg-primary" in x)
-    for badge in badges:
+    # 取得所有交易 <li>
+    list_items = soup.find_all("li", class_="list-group-item")
+    # 移除所有以 "1.&nbsp;" 開頭的 <li>（通常是區塊獎勵或非轉帳項）
+    list_items = [
+        li for li in list_items
+        if not (
+            li.find("div", class_="text-truncate") and
+            li.find("div", class_="text-truncate").get_text(strip=True).startswith("1.")
+        )
+    ]
+
+    for li in list_items:
+        badge = li.find("span", class_=lambda x: x and "badge" in x and "bg-primary" in x)
+        if not badge:
+            continue
         scash_text = badge.get_text(strip=True)
         match = re.search(r"([\d\.]+)\s*SCASH", scash_text)
-        if match and abs(float(match.group(1)) - total_amount) < 1e-8:
-            li = badge.find_parent("li")
-            if not li:
+        if match:
+            amount = float(match.group(1))
+            # 剃除整數剛好50的轉帳
+            if abs(amount - 50) < 1e-8:
                 continue
-            txid_a = li.find("a", href=re.compile(r"^/tx/"))
-            if txid_a:
-                return txid_a.get_text(strip=True)
-    print(f"找不到 <span class=\"badge bg-primary me-1\">{total_amount} SCASH</span>")
+            if abs(amount - total_amount) < 1e-8:
+                txid_a = li.find("a", href=re.compile(r"^/tx/"))
+                if txid_a:
+                    return txid_a.get_text(strip=True)
+
+    # 若找不到，改用 THRESHOLD 查詢所有大於 THRESHOLD 的轉帳
+    print(f"找不到 {total_amount} SCASH，改用閾值 {THRESHOLD} 查詢")
+    for li in list_items:
+        a_tag = li.find("a", href=re.compile(r"^/tx/"))
+        if not a_tag:
+            continue
+        # 檢查 <a> 標籤的父 div 是否以 "1.\xa0" 開頭（即 1.&nbsp;），只跳過這一種
+        parent_div = a_tag.find_parent("div", class_="text-truncate")
+        if parent_div and parent_div.get_text(strip=True).startswith("1.\xa0"):
+            continue  # 跳過只有 1.&nbsp; 開頭的
+        badge = li.find("span", class_=lambda x: x and "badge" in x and "bg-primary" in x)
+        if not badge:
+            continue
+        scash_text = badge.get_text(strip=True)
+        match = re.search(r"([\d\.]+)\s*SCASH", scash_text)
+        if match:
+            amount = float(match.group(1))
+            # 剃除金額在 50±1e-6 之間的轉帳
+            if abs(amount - 50) < 1e-6:
+                continue
+            if amount >= THRESHOLD:
+                print(f"找到大於閾值的轉帳: {amount} SCASH, TxID: {a_tag.get_text(strip=True)}")
+                return a_tag.get_text(strip=True)
+    print(f"找不到任何大於閾值 {THRESHOLD} SCASH 的轉帳")
     return None
 
 def get_tx_outputs(txid):
@@ -100,15 +140,20 @@ def main():
         outputs = get_tx_outputs(txid)
         csv_file = "scash_transfer_records.csv"
         file_exists = os.path.isfile(csv_file)
-        with open(csv_file, mode='a', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow(["Block Height", "TxID", "Total Amount", "Address", "Balance"])
-            for address, amount in outputs:
-                balance = get_address_balance(address)
-                if balance is not None and balance >= THRESHOLD:
-                    print(f"地址 {address} 目前持有 SCASH: {balance}")
-                    writer.writerow([BLOCK_HEIGHT, txid, total_amount, address, balance])
+        rows_to_write = []
+        for address, amount in outputs:
+            balance = get_address_balance(address)
+            if balance is not None and balance >= THRESHOLD:
+                print(f"地址 {address} 目前持有 SCASH: {balance}")
+                rows_to_write.append([BLOCK_HEIGHT, txid, total_amount, address, balance])
+        if rows_to_write:
+            with open(csv_file, mode='a', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                if not file_exists:
+                    writer.writerow(["Block Height", "TxID", "Total Amount", "Address", "Balance"])
+                writer.writerows(rows_to_write)
+        else:
+            print("沒有符合條件的地址，未寫入任何資料。")
 
 if __name__ == "__main__":
     main()
