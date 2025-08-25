@@ -6,12 +6,7 @@ import csv
 import os
 from datetime import datetime
 import time
-
-BLOCK_HEIGHT = 1  # 指定區塊高度
-THRESHOLD = 100  # SCASH 大額轉帳閾值，單位 SCASH
-BASE_URL = "https://scash.one"
-CSV_FILE = "scash_transfer_records.csv"
-ADDRESS_BALANCE_FILE = "scash_address_balances.csv"
+from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, CSV_FILE, ADDRESS_BALANCE_FILE, SHOW_RESULT
 
 def fetch_html(url, retries=10, retry_interval=3):
     for attempt in range(1, retries + 1):
@@ -218,14 +213,18 @@ def process_block(block_height, address_balance_set=None):
         total_amount = get_total_output_amount(soup)
         time_str = get_timestamp(soup)
         if total_amount < THRESHOLD:
-            print(f"總轉帳金額 {total_amount} SCASH 未達閾值 {THRESHOLD} SCASH，跳過後續查詢。")
+            if SHOW_RESULT:
+                print(f"總轉帳金額 {total_amount} SCASH 未達閾值 {THRESHOLD} SCASH，跳過後續查詢。")
             return True
-        print(f"區塊高度: {block_height}")
+        if SHOW_RESULT:
+            print(f"區塊高度: {block_height}")
         txid = find_txid_by_amount(soup, total_amount)
         if not txid:
-            print("未找到對應的 txid，無法查詢地址")
+            if SHOW_RESULT:
+                print("未找到對應的 txid，無法查詢地址")
             return True
-        print(f"轉帳 TxID: {txid}  金額: {total_amount} SCASH")
+        if SHOW_RESULT:
+            print(f"轉帳 TxID: {txid}  金額: {total_amount} SCASH")
         outputs = get_tx_outputs(txid)
         file_exists = os.path.isfile(CSV_FILE)
         rows_to_write = []
@@ -246,7 +245,8 @@ def process_block(block_height, address_balance_set=None):
         if rows_to_write:
             write_transfer_csv(rows_to_write, file_exists)
         else:
-            print("沒有符合條件的地址，未寫入任何資料。")
+            if SHOW_RESULT:
+                print("沒有符合條件的地址，未寫入任何資料。")
         return True
     except Exception as e:
         print(f"查詢區塊 {block_height} 發生錯誤: {e}")
@@ -254,19 +254,21 @@ def process_block(block_height, address_balance_set=None):
 
 def process_address(address):
     balance = get_address_balance(address)
-    if balance is not None:
-        print(f"地址 {address} 目前持有 SCASH: {balance}")
-    else:
-        print("查詢失敗，請確認地址正確。")
+    if SHOW_RESULT:
+        if balance is not None:
+            print(f"地址 {address} 目前持有 SCASH: {balance}")
+        else:
+            print("查詢失敗，請確認地址正確。")
 
 def process_txid(txid):
     outputs = get_tx_outputs(txid)
-    if not outputs:
-        print("此TxID無大額轉帳。")
-        return
-    print(f"TxID: {txid} 的輸出地址與金額：")
-    for address, amount in outputs:
-        print(f"  地址: {address}  金額: {amount} SCASH")
+    if SHOW_RESULT:
+        if not outputs:
+            print("此TxID無大額轉帳。")
+            return
+        print(f"TxID: {txid} 的輸出地址與金額：")
+        for address, amount in outputs:
+            print(f"  地址: {address}  金額: {amount} SCASH")
 
 def main():
     print("選擇模式：")
