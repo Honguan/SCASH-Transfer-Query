@@ -13,15 +13,19 @@ BASE_URL = "https://scash.one"
 CSV_FILE = "scash_transfer_records.csv"
 ADDRESS_BALANCE_FILE = "scash_address_balances.csv"
 
-def fetch_html(url):
-    try:
-        resp = requests.get(url, timeout=10)
-        resp.raise_for_status()
-        resp.encoding = 'utf-8'
-        return BeautifulSoup(resp.text, 'html.parser')
-    except requests.RequestException as e:
-        print(f"HTTP 請求失敗: {e}")
-        sys.exit(1)
+def fetch_html(url, retries=10, retry_interval=3):
+    for attempt in range(1, retries + 1):
+        try:
+            resp = requests.get(url, timeout=10)
+            resp.raise_for_status()
+            resp.encoding = 'utf-8'
+            return BeautifulSoup(resp.text, 'html.parser')
+        except requests.RequestException as e:
+            print(f"HTTP 請求失敗: {e} (第 {attempt} 次)")
+            if attempt < retries:
+                time.sleep(retry_interval)
+            else:
+                sys.exit(1)
 
 def get_timestamp(soup):
     time_div = soup.find("div", class_="fw-bold", string="Time")
