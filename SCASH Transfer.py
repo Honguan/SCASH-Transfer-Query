@@ -179,12 +179,59 @@ def auto_query_mode(start_height, end_height=None, interval=0.1):
             print("已達結束區塊高度，結束自動查詢模式。")
             break
         print(f"\n查詢區塊高度: {height}")
-        result = process_block(height, address_balance_set)
-        if result is False:
+        if not process_and_record_block(height, address_balance_set):
             print("查詢失敗或無法繼續，結束自動查詢模式。")
             break
         height += 1
         time.sleep(interval)
+
+def process_and_record_block(block_height, address_balance_set):
+    """查詢區塊、記錄轉帳與地址餘額，回傳True/False代表是否繼續。"""
+    try:
+        block_url = f"{BASE_URL}/?search={block_height}"
+        soup = fetch_html(block_url)
+        total_amount = get_total_output_amount(soup)
+        time_str = get_timestamp(soup)
+        if total_amount < THRESHOLD:
+            if SHOW_RESULT:
+                print(f"總轉帳金額 {total_amount} SCASH 未達閾值 {THRESHOLD} SCASH，跳過後續查詢。")
+            return True
+        if SHOW_RESULT:
+            print(f"區塊高度: {block_height}")
+        txid = find_txid_by_amount(soup, total_amount)
+        if not txid:
+            if SHOW_RESULT:
+                print("未找到對應的 txid，無法查詢地址")
+            return True
+        if SHOW_RESULT:
+            print(f"轉帳 TxID: {txid}  金額: {total_amount} SCASH")
+        outputs = get_tx_outputs(txid)
+        file_exists = os.path.isfile(CSV_FILE)
+        rows_to_write = []
+        for address, amount in outputs:
+            if amount < THRESHOLD:
+                continue
+            record_address_balance(address, address_balance_set)
+            rows_to_write.append([
+                block_height, txid, address, amount, time_str
+            ])
+        if rows_to_write:
+            write_transfer_csv(rows_to_write, file_exists)
+        else:
+            if SHOW_RESULT:
+                print("沒有符合條件的地址，未寫入任何資料。")
+        return True
+    except Exception as e:
+        print(f"查詢區塊 {block_height} 發生錯誤: {e}")
+        return False
+
+def record_address_balance(address, address_balance_set):
+    """查詢並記錄唯一地址餘額。"""
+    if address_balance_set is not None and address not in address_balance_set:
+        balance = get_address_balance(address)
+        if balance is not None and balance >= THRESHOLD:
+            address_balance_set.add(address)
+            write_address_balance_csv(address, balance)
 
 def manual_query_mode():
     address_balance_set = set()
@@ -193,13 +240,9 @@ def manual_query_mode():
         if user_input.lower() == "exit":
             break
         if user_input.isdigit():
-            process_block(int(user_input), address_balance_set)
+            process_and_record_block(int(user_input), address_balance_set)
         elif user_input.startswith("scash1"):
-            if user_input not in address_balance_set:
-                balance = get_address_balance(user_input)
-                if balance is not None and balance >= THRESHOLD:
-                    address_balance_set.add(user_input)
-                    write_address_balance_csv(user_input, balance)
+            record_address_balance(user_input, address_balance_set)
             process_address(user_input)
         elif re.fullmatch(r"[0-9a-fA-F]{64}", user_input):
             process_txid(user_input)
