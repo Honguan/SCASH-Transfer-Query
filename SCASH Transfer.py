@@ -8,7 +8,7 @@ from datetime import datetime
 import time
 
 BLOCK_HEIGHT = 1  # 指定區塊高度
-THRESHOLD = 500  # SCASH 大額轉帳閾值，單位 SCASH
+THRESHOLD = 100  # SCASH 大額轉帳閾值，單位 SCASH
 BASE_URL = "https://scash.one"
 CSV_FILE = "scash_transfer_records.csv"
 ADDRESS_BALANCE_FILE = "scash_address_balances.csv"
