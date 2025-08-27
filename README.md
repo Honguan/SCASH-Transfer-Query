@@ -23,7 +23,8 @@ SCASH Transfer Query 是一個用於查詢 SCASH 區塊鏈資料、篩選大額�
 安裝所需套件：
 
 ```bash
-pip install requests beautifulsoup4
+pip3 install beautifulsoup4
+
 ```
 
 
@@ -44,7 +45,7 @@ pip install requests beautifulsoup4
 在終端機中執行：
 
 ```bash
-python SCASH Transfer.py
+python3 SCASH\ Transfer.py
 ```
 
 依照指示選擇自動查詢或手動查詢模式。
@@ -84,6 +85,6 @@ python SCASH Transfer.py
 
 SCASH 捐贈地址：
 
-`scash1qz6w2n6w2n6w2n6w2n6w2n6w2n6w2n6w2n6w2n6`
+`scash1qxz7d3gf9yhequz4v9h0tqkcrrlv5a4nps9dlzn`
 
 ![SCASH 捐贈地址](assets/scash.png)
