@@ -50,7 +50,10 @@ def get_total_output_amount(soup):
         sys.exit(1)
     return float(match.group(1).replace("'", ""))
 
-def find_txid_by_amount(soup, total_amount):
+def find_txids_by_amount(soup, total_amount):
+    """
+    優先找整數位相同的轉帳txid，再找所有大於閾值的轉帳txid，回傳所有txid(不重複，優先順序)。
+    """
     list_items = [
         li for li in soup.find_all("li", class_="list-group-item")
         if not (
@@ -58,6 +61,10 @@ def find_txid_by_amount(soup, total_amount):
             div.get_text(strip=True).startswith("1.")
         )
     ]
+    txids = []
+    seen = set()
+    # 1. 優先找整數位相同的轉帳
+    total_int = int(total_amount)
     for li in list_items:
         badge = li.find("span", class_=lambda x: x and "badge" in x and "bg-primary" in x)
         if not badge:
@@ -68,11 +75,14 @@ def find_txid_by_amount(soup, total_amount):
         amount = float(match.group(1))
         if abs(amount - 50) < 1e-6:
             continue
-        if abs(amount - total_amount) < 1e-8:
+        if int(amount) == total_int and amount >= THRESHOLD:
             txid_a = li.find("a", href=re.compile(r"^/tx/"))
             if txid_a:
-                return txid_a.get_text(strip=True)
-    print(f"找不到 {total_amount} SCASH，改用閾值 {THRESHOLD} 查詢")
+                txid = txid_a.get_text(strip=True)
+                if txid not in seen:
+                    txids.append(txid)
+                    seen.add(txid)
+    # 2. 其他大於閾值的轉帳
     for li in list_items:
         badge = li.find("span", class_=lambda x: x and "badge" in x and "bg-primary" in x)
         if not badge:
@@ -86,10 +96,13 @@ def find_txid_by_amount(soup, total_amount):
         if amount >= THRESHOLD:
             a_tag = li.find("a", href=re.compile(r"^/tx/"))
             if a_tag:
-                print(f"找到大於閾值的轉帳: {amount} SCASH, TxID: {a_tag.get_text(strip=True)}")
-                return a_tag.get_text(strip=True)
-    print(f"找不到任何大於閾值 {THRESHOLD} SCASH 的轉帳")
-    return None
+                txid = a_tag.get_text(strip=True)
+                if txid not in seen:
+                    txids.append(txid)
+                    seen.add(txid)
+    if not txids:
+        print(f"找不到任何大於閾值 {THRESHOLD} SCASH 的轉帳")
+    return txids
 
 def get_tx_outputs(txid):
     tx_url = f"{BASE_URL}/tx/{txid}"
@@ -139,36 +152,59 @@ def write_transfer_csv(rows, file_exists):
         writer.writerows(rows)
 
 def write_address_balance_csv(address, balance):
-    # 僅寫入單一新查詢的地址，且不重複，且餘額需大於等於 THRESHOLD
+    # 新格式: Address, Balance, 掃描時間, 更新時間, 更新數量, 變動
     if balance < THRESHOLD:
         return
+    from datetime import datetime
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     file_exists = os.path.isfile(ADDRESS_BALANCE_FILE)
     rows = []
     updated = False
+    found = False
+    last_balance = None
+    update_count = 0
+    scan_time = now_str
+    update_time = ''
+    change_str = ''
+    # 讀取舊資料
     if file_exists:
         with open(ADDRESS_BALANCE_FILE, mode='r', encoding='utf-8') as f:
             reader = csv.reader(f)
             header = next(reader, None)
             for row in reader:
                 if row and row[0] == address:
-                    # 若已存在且餘額不同則更新
-                    if float(row[1]) != float(balance):
-                        rows.append([address, str(balance)])
+                    found = True
+                    try:
+                        last_balance = float(row[1])
+                        scan_time = row[2] if len(row) > 2 else now_str
+                        update_time = row[3] if len(row) > 3 else ''
+                        update_count = int(row[4]) if len(row) > 4 and row[4].isdigit() else 0
+                    except Exception:
+                        pass
+                    # 比較餘額變動
+                    diff = balance - last_balance if last_balance is not None else 0
+                    if abs(diff) > 1e-8:
+                        change_str = f"{'+' if diff > 0 else ''}{diff:.8f}"
+                        update_time = now_str
+                        update_count += 1
+                        rows.append([address, str(balance), scan_time, update_time, str(update_count), change_str])
                         updated = True
                     else:
+                        # 無變動
                         rows.append(row)
                 else:
                     rows.append(row)
-    if not file_exists or (file_exists and not any(r[0] == address for r in rows)):
-        rows.append([address, str(balance)])
+    if not found:
+        # 新增
+        rows.append([address, str(balance), now_str, '', '0', ''])
         updated = True
     if updated or not file_exists:
         # 依餘額排序
-        rows = [r for r in rows if len(r) == 2]
+        rows = [r for r in rows if len(r) >= 2]
         rows.sort(key=lambda x: float(x[1]), reverse=True)
         with open(ADDRESS_BALANCE_FILE, mode='w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(["Address", "Balance"])
+            writer.writerow(["Address", "Balance", "掃描時間", "更新時間", "更新數量", "變動"])
             writer.writerows(rows)
 
 def auto_query_mode(start_height, end_height=None):
@@ -198,25 +234,28 @@ def process_and_record_block(block_height, address_balance_set):
             return True
         if SHOW_RESULT:
             print(f"區塊高度: {block_height}")
-        txid = find_txid_by_amount(soup, total_amount)
-        if not txid:
+        txids = find_txids_by_amount(soup, total_amount)
+        if not txids:
             if SHOW_RESULT:
                 print("未找到對應的 txid，無法查詢地址")
             return True
-        if SHOW_RESULT:
-            print(f"轉帳 TxID: {txid}  金額: {total_amount} SCASH")
-        outputs = get_tx_outputs(txid)
         file_exists = os.path.isfile(CSV_FILE)
-        rows_to_write = []
-        for address, amount in outputs:
-            if amount < THRESHOLD:
-                continue
-            record_address_balance(address, address_balance_set)
-            rows_to_write.append([
-                block_height, txid, address, amount, time_str
-            ])
-        if rows_to_write:
-            write_transfer_csv(rows_to_write, file_exists)
+        all_rows_to_write = []
+        for txid in txids:
+            if SHOW_RESULT:
+                print(f"轉帳 TxID: {txid}")
+            outputs = get_tx_outputs(txid)
+            rows_to_write = []
+            for address, amount in outputs:
+                if amount < THRESHOLD:
+                    continue
+                record_address_balance(address, address_balance_set)
+                rows_to_write.append([
+                    block_height, txid, address, amount, time_str
+                ])
+            all_rows_to_write.extend(rows_to_write)
+        if all_rows_to_write:
+            write_transfer_csv(all_rows_to_write, file_exists)
         else:
             if SHOW_RESULT:
                 print("沒有符合條件的地址，未寫入任何資料。")
@@ -261,32 +300,35 @@ def process_block(block_height, address_balance_set=None):
             return True
         if SHOW_RESULT:
             print(f"區塊高度: {block_height}")
-        txid = find_txid_by_amount(soup, total_amount)
-        if not txid:
+        txids = find_txids_by_amount(soup, total_amount)
+        if not txids:
             if SHOW_RESULT:
                 print("未找到對應的 txid，無法查詢地址")
             return True
-        if SHOW_RESULT:
-            print(f"轉帳 TxID: {txid}  金額: {total_amount} SCASH")
-        outputs = get_tx_outputs(txid)
         file_exists = os.path.isfile(CSV_FILE)
-        rows_to_write = []
-        for address, amount in outputs:
-            if amount < THRESHOLD:
-                continue
-            # 查詢地址餘額並記錄唯一地址
-            if address_balance_set is not None:
-                if address not in address_balance_set:
-                    balance = get_address_balance(address)
-                    if balance is not None and balance >= THRESHOLD:
-                        address_balance_set.add(address)
-                        write_address_balance_csv(address, balance)
-            # 寫入轉帳紀錄
-            rows_to_write.append([
-                block_height, txid, address, amount, time_str
-            ])
-        if rows_to_write:
-            write_transfer_csv(rows_to_write, file_exists)
+        all_rows_to_write = []
+        for txid in txids:
+            if SHOW_RESULT:
+                print(f"轉帳 TxID: {txid}")
+            outputs = get_tx_outputs(txid)
+            rows_to_write = []
+            for address, amount in outputs:
+                if amount < THRESHOLD:
+                    continue
+                # 查詢地址餘額並記錄唯一地址
+                if address_balance_set is not None:
+                    if address not in address_balance_set:
+                        balance = get_address_balance(address)
+                        if balance is not None and balance >= THRESHOLD:
+                            address_balance_set.add(address)
+                            write_address_balance_csv(address, balance)
+                # 寫入轉帳紀錄
+                rows_to_write.append([
+                    block_height, txid, address, amount, time_str
+                ])
+            all_rows_to_write.extend(rows_to_write)
+        if all_rows_to_write:
+            write_transfer_csv(all_rows_to_write, file_exists)
         else:
             if SHOW_RESULT:
                 print("沒有符合條件的地址，未寫入任何資料。")
