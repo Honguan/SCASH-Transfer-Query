@@ -7,3 +7,4 @@ scash_data.db-journal
 config.py
 __pycache__/config.cpython-38.pyc
 assets/dashboard_data.js
+dashboard_data.js
