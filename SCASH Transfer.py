@@ -2,11 +2,40 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import sys
-import csv
+import sqlite3
 import os
 from datetime import datetime
 import time
-from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, CSV_FILE, ADDRESS_BALANCE_FILE, SHOW_RESULT, SCAN_INTERVAL
+from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, CSV_FILE, ADDRESS_BALANCE_FILE, SHOW_RESULT, SCAN_INTERVAL, DB_FILE
+def init_db():
+    with sqlite3.connect(DB_FILE) as conn:
+        c = conn.cursor()
+        # 區塊表：block_height 主鍵，txids 為 JSON 字串
+        c.execute('''CREATE TABLE IF NOT EXISTS block (
+            block_height INTEGER PRIMARY KEY,
+            txids TEXT
+        )''')
+        # 交易表：每一筆 address/amount/transfer_time 都是一列
+        c.execute('''CREATE TABLE IF NOT EXISTS tx (
+            txid TEXT,
+            block_height INTEGER,
+            address TEXT,
+            amount REAL,
+            transfer_time TEXT,
+            PRIMARY KEY (txid, address),
+            FOREIGN KEY (block_height) REFERENCES block(block_height)
+        )''')
+        # 地址餘額表
+        c.execute('''CREATE TABLE IF NOT EXISTS scash_address_balances (
+            address TEXT PRIMARY KEY,
+            balance REAL,
+            scan_time TEXT,
+            update_time TEXT,
+            update_count INTEGER,
+            change_str TEXT
+        )''')
+        conn.commit()
+
 
 def fetch_html(url, retries=10, retry_interval=3):
     for attempt in range(1, retries + 1):
@@ -142,70 +171,56 @@ def get_address_balance(address):
         return None
     return float(match.group(1))
 
-def write_transfer_csv(rows, file_exists):
-    with open(CSV_FILE, mode='a', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow([
-                "Block Height", "TxID", "Address", "Amount", "Transfer Time"
-            ])
-        writer.writerows(rows)
 
-def write_address_balance_csv(address, balance):
-    # 新格式: Address, Balance, 掃描時間, 更新時間, 更新數量, 變動
+def write_transfer_db(rows):
+    with sqlite3.connect(DB_FILE) as conn:
+        c = conn.cursor()
+        for row in rows:
+            c.execute('''INSERT INTO scash_transfer_records (block_height, txid, address, amount, transfer_time)
+                         VALUES (?, ?, ?, ?, ?)''', row)
+        conn.commit()
+
+
+def write_address_balance_db(address, balance, conn=None):
     if balance < THRESHOLD:
         return
-    from datetime import datetime
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    file_exists = os.path.isfile(ADDRESS_BALANCE_FILE)
-    rows = []
-    updated = False
-    found = False
-    last_balance = None
-    update_count = 0
-    scan_time = now_str
-    update_time = ''
-    change_str = ''
-    # 讀取舊資料
-    if file_exists:
-        with open(ADDRESS_BALANCE_FILE, mode='r', encoding='utf-8') as f:
-            reader = csv.reader(f)
-            header = next(reader, None)
-            for row in reader:
-                if row and row[0] == address:
-                    found = True
-                    try:
-                        last_balance = float(row[1])
-                        scan_time = row[2] if len(row) > 2 else now_str
-                        update_time = row[3] if len(row) > 3 else ''
-                        update_count = int(row[4]) if len(row) > 4 and row[4].isdigit() else 0
-                    except Exception:
-                        pass
-                    # 比較餘額變動
-                    diff = balance - last_balance if last_balance is not None else 0
-                    if abs(diff) > 1e-8:
-                        change_str = f"{'+' if diff > 0 else ''}{diff:.8f}"
-                        update_time = now_str
-                        update_count += 1
-                        rows.append([address, str(balance), scan_time, update_time, str(update_count), change_str])
-                        updated = True
-                    else:
-                        # 無變動
-                        rows.append(row)
-                else:
-                    rows.append(row)
-    if not found:
+    close_conn = False
+    if conn is None:
+        conn = sqlite3.connect(DB_FILE)
+        close_conn = True
+    c = conn.cursor()
+    c.execute('SELECT balance, scan_time, update_time, update_count FROM scash_address_balances WHERE address=?', (address,))
+    row = c.fetchone()
+    if row:
+        last_balance, scan_time, update_time, update_count = row
+        diff = balance - last_balance if last_balance is not None else 0
+        if abs(diff) > 1e-8:
+            # diff > 0 顯示 +，diff < 0 顯示 -
+            if diff > 0:
+                change_str = f"+{diff:.8f}"
+            else:
+                change_str = f"{diff:.8f}"
+            update_time = now_str
+            update_count = (update_count or 0) + 1
+            c.execute('''UPDATE scash_address_balances SET balance=?, update_time=?, update_count=?, change_str=? WHERE address=?''',
+                      (balance, update_time, update_count, change_str, address))
+    else:
         # 新增
-        rows.append([address, str(balance), now_str, '', '0', ''])
-        updated = True
-    if updated or not file_exists:
-        # 依餘額排序
-        rows = [r for r in rows if len(r) >= 2]
-        rows.sort(key=lambda x: float(x[1]), reverse=True)
-        with open(ADDRESS_BALANCE_FILE, mode='w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(["Address", "Balance", "掃描時間", "更新時間", "更新數量", "變動"])
-            writer.writerows(rows)
+        c.execute('''INSERT INTO scash_address_balances (address, balance, scan_time, update_time, update_count, change_str)
+                     VALUES (?, ?, ?, ?, ?, ?)''',
+                  (address, balance, now_str, '', 0, ''))
+    if close_conn:
+        conn.commit()
+        conn.close()
+
+def record_address_balance(address, address_balance_set, conn=None):
+    """查詢並記錄唯一地址餘額。"""
+    if address_balance_set is not None and address not in address_balance_set:
+        balance = get_address_balance(address)
+        if balance is not None and balance >= THRESHOLD:
+            address_balance_set.add(address)
+            write_address_balance_db(address, balance, conn)
 
 def auto_query_mode(start_height, end_height=None):
     height = start_height
@@ -223,6 +238,8 @@ def auto_query_mode(start_height, end_height=None):
 
 def process_and_record_block(block_height, address_balance_set):
     """查詢區塊、記錄轉帳與地址餘額，回傳True/False代表是否繼續。"""
+    import json
+    import traceback
     try:
         block_url = f"{BASE_URL}/?search={block_height}"
         soup = fetch_html(block_url)
@@ -239,38 +256,28 @@ def process_and_record_block(block_height, address_balance_set):
             if SHOW_RESULT:
                 print("未找到對應的 txid，無法查詢地址")
             return True
-        file_exists = os.path.isfile(CSV_FILE)
-        all_rows_to_write = []
-        for txid in txids:
-            if SHOW_RESULT:
-                print(f"轉帳 TxID: {txid}")
-            outputs = get_tx_outputs(txid)
-            rows_to_write = []
-            for address, amount in outputs:
-                if amount < THRESHOLD:
-                    continue
-                record_address_balance(address, address_balance_set)
-                rows_to_write.append([
-                    block_height, txid, address, amount, time_str
-                ])
-            all_rows_to_write.extend(rows_to_write)
-        if all_rows_to_write:
-            write_transfer_csv(all_rows_to_write, file_exists)
-        else:
-            if SHOW_RESULT:
-                print("沒有符合條件的地址，未寫入任何資料。")
+        # 寫入 block、tx、address_balance 都共用同一個 conn
+        with sqlite3.connect(DB_FILE) as conn:
+            c = conn.cursor()
+            c.execute('INSERT OR REPLACE INTO block (block_height, txids) VALUES (?, ?)', (block_height, json.dumps(txids)))
+            for txid in txids:
+                if SHOW_RESULT:
+                    print(f"轉帳 TxID: {txid}")
+                outputs = get_tx_outputs(txid)
+                for address, amount in outputs:
+                    if amount < THRESHOLD:
+                        continue
+                    record_address_balance(address, address_balance_set, conn)
+                    c.execute('''INSERT OR REPLACE INTO tx (txid, block_height, address, amount, transfer_time)
+                                 VALUES (?, ?, ?, ?, ?)''',
+                              (txid, block_height, address, amount, time_str))
+            conn.commit()
         return True
     except Exception as e:
         print(f"查詢區塊 {block_height} 發生錯誤: {e}")
+        traceback.print_exc()
         return False
 
-def record_address_balance(address, address_balance_set):
-    """查詢並記錄唯一地址餘額。"""
-    if address_balance_set is not None and address not in address_balance_set:
-        balance = get_address_balance(address)
-        if balance is not None and balance >= THRESHOLD:
-            address_balance_set.add(address)
-            write_address_balance_csv(address, balance)
 
 def manual_query_mode():
     address_balance_set = set()
@@ -281,7 +288,7 @@ def manual_query_mode():
         if user_input.isdigit():
             process_and_record_block(int(user_input), address_balance_set)
         elif user_input.startswith("scash1"):
-            record_address_balance(user_input, address_balance_set)
+            record_address_balance(user_input, address_balance_set, None)
             process_address(user_input)
         elif re.fullmatch(r"[0-9a-fA-F]{64}", user_input):
             process_txid(user_input)
@@ -305,7 +312,6 @@ def process_block(block_height, address_balance_set=None):
             if SHOW_RESULT:
                 print("未找到對應的 txid，無法查詢地址")
             return True
-        file_exists = os.path.isfile(CSV_FILE)
         all_rows_to_write = []
         for txid in txids:
             if SHOW_RESULT:
@@ -321,14 +327,14 @@ def process_block(block_height, address_balance_set=None):
                         balance = get_address_balance(address)
                         if balance is not None and balance >= THRESHOLD:
                             address_balance_set.add(address)
-                            write_address_balance_csv(address, balance)
+                            write_address_balance_db(address, balance)
                 # 寫入轉帳紀錄
                 rows_to_write.append([
                     block_height, txid, address, amount, time_str
                 ])
             all_rows_to_write.extend(rows_to_write)
         if all_rows_to_write:
-            write_transfer_csv(all_rows_to_write, file_exists)
+            write_transfer_db(all_rows_to_write)
         else:
             if SHOW_RESULT:
                 print("沒有符合條件的地址，未寫入任何資料。")
@@ -356,6 +362,7 @@ def process_txid(txid):
             print(f"  地址: {address}  金額: {amount} SCASH")
 
 def main():
+    init_db()
     while True:
         print("\n選擇模式：")
         print("1. 自動查詢模式 (可指定起始/結束區塊高度，結束高度預設查不到為止)")
