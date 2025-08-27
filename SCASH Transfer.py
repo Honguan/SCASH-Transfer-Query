@@ -226,15 +226,29 @@ def auto_query_mode(start_height, end_height=None):
     height = start_height
     address_balance_set = set()
     while True:
-        if end_height is not None and height > end_height:
-            print("已達結束區塊高度，結束自動查詢模式。")
-            break
-        print(f"\n查詢區塊高度: {height}")
-        if not process_and_record_block(height, address_balance_set):
-            print("查詢失敗或無法繼續，結束自動查詢模式。")
-            break
-        height += 1
-        time.sleep(SCAN_INTERVAL)
+        try:
+            if end_height is not None and height > end_height:
+                print("已達結束區塊高度，結束自動查詢模式。")
+                break
+            print(f"\n查詢區塊高度: {height}")
+            if not process_and_record_block(height, address_balance_set):
+                print("查詢失敗或無法繼續，結束自動查詢模式。")
+                break
+            height += 1
+            time.sleep(SCAN_INTERVAL)
+        except KeyboardInterrupt:
+            print("\n偵測到中斷 (Ctrl+C)，將完成本區塊查詢與寫入後詢問是否終止...")
+            # 這裡已經查詢完畢並寫入，詢問用戶
+            while True:
+                user_choice = input("是否終止程序？(Y/n): ").strip().lower()
+                if user_choice == '' or user_choice == 'y':
+                    print("程式已終止。")
+                    return
+                elif user_choice == 'n':
+                    print("繼續查詢...")
+                    break
+                else:
+                    print("請輸入 Y 或 n。直接 Enter 預設為 Y。")
 
 def process_and_record_block(block_height, address_balance_set):
     """查詢區塊、記錄轉帳與地址餘額，回傳True/False代表是否繼續。"""
