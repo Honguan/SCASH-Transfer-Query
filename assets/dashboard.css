@@ -1,0 +1,126 @@
+body {
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #181c24;
+  margin: 0;
+  padding: 0;
+  color: #fff;
+}
+.container {
+  max-width: 1200px;
+  margin: 30px auto;
+  background: #23273a;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px #0006;
+  padding: 32px;
+}
+h1 {
+  text-align: center;
+  margin-bottom: 24px;
+  color: #fff;
+}
+.flex {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.chart-area {
+  flex: 0 0 420px;
+  min-width: 320px;
+  max-width: 480px;
+  background: #23273a;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px #0003;
+  padding: 16px;
+}
+.table-area {
+  flex: 1 1 400px;
+  min-width: 350px;
+  max-width: 600px;
+  background: #23273a;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px #0003;
+  padding: 16px;
+}
+.table-area table {
+  table-layout: fixed;
+  word-break: break-all;
+  background: #23273a;
+  color: #fff;
+}
+.table-area th,
+.table-area td {
+  padding-left: 0;
+  padding-right: 0;
+  background: #23273a;
+  color: #fff;
+}
+.table-area td:nth-child(2),
+.table-area th:nth-child(2) {
+  word-break: break-all !important;
+  white-space: normal !important;
+  min-width: 420px !important;
+}
+.table-area td:nth-child(2),
+.table-area th:nth-child(2) {
+  min-width: 420px !important;
+  max-width: 600px !important;
+  overflow: visible !important;
+  text-overflow: initial !important;
+}
+.table-area td:last-child,
+.table-area th:last-child {
+  min-width: 260px !important;
+  max-width: 400px !important;
+  overflow: visible !important;
+  text-overflow: initial !important;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  background: #23273a;
+  color: #fff;
+}
+th,
+td {
+  border: 1px solid #393e54;
+  padding: 8px 0;
+  text-align: center;
+}
+th {
+  background: #23273a;
+  color: #b7b9c9;
+}
+.section-title {
+  margin-top: 40px;
+  font-size: 1.3em;
+  color: #fff;
+}
+.tx-table {
+  margin-top: 8px;
+  background: #23273a;
+  color: #fff;
+}
+.tx-table td,
+.tx-table th {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: #23273a;
+  color: #fff;
+}
+a { color: #a97cff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.collapsible { color: #fff; background: #2d3146; border-radius: 6px; padding: 4px 12px; margin-bottom: 4px; display: inline-block; }
+.collapsible b { color: #fff; }
+.collapsible.collapsed b { color: #b7b9c9; }
+.mb-16 { margin-bottom: 16px; }
+.mt-16 { margin-top: 16px; }
+.collapsible-content {
+  display: block;
+}
+.collapsible.collapsed + .collapsible-content {
+  display: none !important;
+}

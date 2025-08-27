@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SCASH Address Balances Dashboard</title>
+    <link rel="icon" type="image/png" href="assets\satoshicash.webp" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="assets\dashboard_data.js"></script>
+  <link rel="stylesheet" href="assets/dashboard.css">
+  </head>
+  <body>
+    <div class="container">
+      <h1>
+        <img
+          src="assets\satoshicash.webp"
+          alt="SCASH Logo"
+          style="height: 48px; vertical-align: middle; margin-right: 12px"
+        />
+        SCASH Address Balances Dashboard
+      </h1>
+      <div class="flex">
+        <div class="chart-area">
+          <canvas
+            id="pieChart"
+            width="420"
+            height="420"
+            style="max-width: 100%; max-height: 100%"
+          ></canvas>
+        </div>
+        <div class="table-area">
+          <h2>地址餘額排行榜</h2>
+          <div class="mb-16 collapsible" data-target="rankTable10">
+            <b>前10名 ▼</b>
+          </div>
+          <div class="collapsible-content" id="wrap-rankTable10">
+            <table id="rankTable10">
+              <thead>
+                <tr>
+                  <th>排名</th>
+                  <th>地址</th>
+                  <th>餘額</th>
+                  <th>變動數量</th>
+                  <th>更新時間</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="mt-16 collapsible" data-target="rankTable50">
+            <b>第11~50名 ▼</b>
+          </div>
+          <div class="collapsible-content" id="wrap-rankTable50">
+            <table id="rankTable50">
+              <thead>
+                <tr>
+                  <th>排名</th>
+                  <th>地址</th>
+                  <th>餘額</th>
+                  <th>變動數量</th>
+                  <th>更新時間</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="mt-16 collapsible" data-target="rankTable100">
+            <b>第51~100名 ▼</b>
+          </div>
+          <div class="collapsible-content" id="wrap-rankTable100">
+            <table id="rankTable100">
+              <thead>
+                <tr>
+                  <th>排名</th>
+                  <th>地址</th>
+                  <th>餘額</th>
+                  <th>變動數量</th>
+                  <th>更新時間</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="section-title">大額轉帳紀錄（block & tx）</div>
+      <table class="tx-table" id="txTable">
+        <thead>
+          <tr>
+            <th>區塊高度</th>
+            <th>TxID</th>
+            <th>地址</th>
+            <th>金額</th>
+            <th>時間</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <script>
+      // 修正摺疊排行榜表格功能
+      document.addEventListener("DOMContentLoaded", function () {
+        // 預設只展開前10名
+        document.querySelectorAll(".collapsible").forEach(function (btn, idx) {
+          const target = btn.getAttribute("data-target");
+          const wrap = document.getElementById("wrap-" + target);
+          if (idx > 0) {
+            btn.classList.add("collapsed");
+            btn.innerHTML = btn.innerHTML.replace("▼", "▲");
+            wrap.style.maxHeight = "0";
+            wrap.style.opacity = "0.2";
+            wrap.style.pointerEvents = "none";
+          } else {
+            btn.classList.remove("collapsed");
+            btn.innerHTML = btn.innerHTML.replace("▲", "▼");
+            wrap.style.maxHeight = "2000px";
+            wrap.style.opacity = "1";
+            wrap.style.pointerEvents = "auto";
+          }
+          btn.addEventListener("click", function () {
+            btn.classList.toggle("collapsed");
+            if (btn.classList.contains("collapsed")) {
+              btn.innerHTML = btn.innerHTML.replace("▼", "▲");
+              wrap.style.maxHeight = "0";
+              wrap.style.opacity = "0.2";
+              wrap.style.pointerEvents = "none";
+            } else {
+              btn.innerHTML = btn.innerHTML.replace("▲", "▼");
+              wrap.style.maxHeight = "2000px";
+              wrap.style.opacity = "1";
+              wrap.style.pointerEvents = "auto";
+            }
+          });
+        });
+      });
+
+      // 圓餅圖
+      function renderPieChart() {
+        const ctx = document.getElementById("pieChart").getContext("2d");
+        const top10 = addressBalances.slice(0, 10);
+        const labels = top10.map((x) => x.address);
+        const data = top10.map((x) => x.balance);
+        new Chart(ctx, {
+          type: "pie",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                data: data,
+                backgroundColor: [
+                  "#4e79a7",
+                  "#f28e2b",
+                  "#e15759",
+                  "#76b7b2",
+                  "#59a14f",
+                  "#edc949",
+                  "#af7aa1",
+                  "#ff9da7",
+                  "#9c755f",
+                  "#bab0ab",
+                ],
+              },
+            ],
+          },
+          options: {
+            plugins: {
+              legend: { position: "bottom" },
+              title: { display: true, text: "前10大地址餘額分布" },
+              datalabels: {
+                color: "#fff",
+                font: { weight: "bold", size: 16 },
+                formatter: function (value, context) {
+                  const total = context.chart.data.datasets[0].data.reduce(
+                    (a, b) => a + b,
+                    0
+                  );
+                  const percent = total ? (value / total) * 100 : 0;
+                  return percent > 2 ? percent.toFixed(1) + "%" : "";
+                },
+              },
+            },
+          },
+          plugins: [ChartDataLabels],
+        });
+      }
+
+      // 排行榜三區表格
+      function renderRankTables() {
+        // 前10
+        const tbody10 = document.querySelector("#rankTable10 tbody");
+        tbody10.innerHTML = "";
+        addressBalances.slice(0, 10).forEach((x, i) => {
+          const tr = document.createElement("tr");
+          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='word-break:break-all;max-width:700px;display:inline-block;'>${x.address}</a>`;
+          let changeCell = "";
+          let updateTime = x.update_time || x.scan_time || "";
+          let updateDate = updateTime ? updateTime.split(" ")[0] : "";
+          let updateTimeCell = updateTime
+            ? `<span class='fold-time' style='cursor:pointer;color:#0074d9;' title='點擊展開/收合'>${updateDate}</span><span class='full-time' style='display:none;'>${updateTime}</span>`
+            : "";
+          if (x.change_str && x.change_str !== "0" && x.update_time) {
+            changeCell = `${x.change_str} <br><span style='font-size:0.9em;color:#888'>${x.update_time}</span>`;
+          } else {
+            changeCell = "±0";
+          }
+          tr.innerHTML = `<td>${
+            i + 1
+          }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${Math.round(
+            x.balance
+          )}</td><td>${changeCell}</td><td>${updateTimeCell}</td>`;
+          tbody10.appendChild(tr);
+        });
+
+        // 第11~50名
+        const tbody50 = document.querySelector("#rankTable50 tbody");
+        tbody50.innerHTML = "";
+        addressBalances.slice(10, 50).forEach((x, i) => {
+          const tr = document.createElement("tr");
+          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='word-break:break-all;max-width:700px;display:inline-block;'>${x.address}</a>`;
+          let changeCell = "";
+          let updateTime = x.update_time || x.scan_time || "";
+          let updateDate = updateTime ? updateTime.split(" ")[0] : "";
+          let updateTimeCell = updateTime
+            ? `<span class='fold-time' style='cursor:pointer;color:#0074d9;' title='點擊展開/收合'>${updateDate}</span><span class='full-time' style='display:none;'>${updateTime}</span>`
+            : "";
+          if (x.change_str && x.change_str !== "0" && x.update_time) {
+            changeCell = `${x.change_str} <br><span style='font-size:0.9em;color:#888'>${x.update_time}</span>`;
+          } else {
+            changeCell = "±0";
+          }
+          tr.innerHTML = `<td>${
+            i + 11
+          }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${Math.round(
+            x.balance
+          )}</td><td>${changeCell}</td><td>${updateTimeCell}</td>`;
+          tbody50.appendChild(tr);
+        });
+
+        // 第51~100名
+        const tbody100 = document.querySelector("#rankTable100 tbody");
+        tbody100.innerHTML = "";
+        addressBalances.slice(50, 100).forEach((x, i) => {
+          const tr = document.createElement("tr");
+          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='word-break:break-all;max-width:700px;display:inline-block;'>${x.address}</a>`;
+          let changeCell = "";
+          let updateTime = x.update_time || x.scan_time || "";
+          let updateDate = updateTime ? updateTime.split(" ")[0] : "";
+          let updateTimeCell = updateTime
+            ? `<span class='fold-time' style='cursor:pointer;color:#0074d9;' title='點擊展開/收合'>${updateDate}</span><span class='full-time' style='display:none;'>${updateTime}</span>`
+            : "";
+          if (x.change_str && x.change_str !== "0" && x.update_time) {
+            changeCell = `${x.change_str} <br><span style='font-size:0.9em;color:#888'>${x.update_time}</span>`;
+          } else {
+            changeCell = "±0";
+          }
+          tr.innerHTML = `<td>${
+            i + 51
+          }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${Math.round(
+            x.balance
+          )}</td><td>${changeCell}</td><td>${updateTimeCell}</td>`;
+          tbody100.appendChild(tr);
+        });
+      }
+
+      // 大額轉帳紀錄表格
+      function renderTxTable() {
+        const tbody = document.querySelector("#txTable tbody");
+        tbody.innerHTML = "";
+        // 只顯示最後20個區塊的紀錄
+        // 先取得所有出現過的區塊高度，取最新20個
+        const blockSet = new Set();
+        const last20Blocks = [];
+        for (
+          let i = txRecords.length - 1;
+          i >= 0 && last20Blocks.length < 20;
+          i--
+        ) {
+          const blk = txRecords[i].block_height;
+          if (!blockSet.has(blk)) {
+            blockSet.add(blk);
+            last20Blocks.unshift(blk);
+          }
+        }
+        // 過濾出這20個區塊的所有紀錄（由新到舊排序）
+        const showRecords = txRecords.filter((x) =>
+          last20Blocks.includes(x.block_height)
+        );
+        showRecords.forEach((x) => {
+          const tr = document.createElement("tr");
+          const blockLink = `<a href='https://scash.one/?search=${x.block_height}' target='_blank' rel='noopener'>${x.block_height}</a>`;
+          const txidLink = `<a href='https://scash.one/?search=${x.txid}' target='_blank' rel='noopener'>${x.txid}</a>`;
+          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener'>${x.address}</a>`;
+          tr.innerHTML = `<td>${blockLink}</td><td>${txidLink}</td><td>${addrLink}</td><td>${x.amount}</td><td>${x.transfer_time}</td>`;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // 初始化
+      renderPieChart();
+      renderRankTables();
+      renderTxTable();
+
+      // 折疊/展開更新時間
+      document.addEventListener("click", function (e) {
+        if (e.target.classList.contains("fold-time")) {
+          const fold = e.target;
+          const full = fold.nextElementSibling;
+          if (full.style.display === "none") {
+            fold.style.display = "none";
+            full.style.display = "";
+          } else {
+            fold.style.display = "";
+            full.style.display = "none";
+          }
+        } else if (e.target.classList.contains("full-time")) {
+          const full = e.target;
+          const fold = full.previousElementSibling;
+          if (fold.style.display === "none") {
+            fold.style.display = "";
+            full.style.display = "none";
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
