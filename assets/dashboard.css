@@ -1,22 +1,41 @@
+/* 底部紅色版權區塊 */
+.footer-copyright {
+  width: 100vw;
+  background: #9221be;
+  color: #fff;
+  text-align: center;
+  font-size: 1.05em;
+  padding: 10px 0 8px 0;
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  z-index: 999;
+  letter-spacing: 1px;
+}
+.footer-copyright a {
+  color: #fff;
+  text-decoration: underline;
+  margin-left: 8px;
+}
 body {
   font-family: "Segoe UI", Arial, sans-serif;
-  background: #181c24;
+  background: #f6f3ff;
   margin: 0;
   padding: 0;
-  color: #fff;
+  color: #4b2e6d;
 }
 .container {
   max-width: 1200px;
   margin: 30px auto;
-  background: #23273a;
+  background: #ede6fa;
   border-radius: 16px;
-  box-shadow: 0 2px 16px #0006;
+  box-shadow: 0 2px 16px #cbb6f7;
   padding: 32px;
 }
 h1 {
   text-align: center;
   margin-bottom: 24px;
-  color: #fff;
+  color: #7c4dff;
 }
 .flex {
   display: flex;
@@ -28,32 +47,32 @@ h1 {
   flex: 0 0 420px;
   min-width: 320px;
   max-width: 480px;
-  background: #23273a;
+  background: #f3eaff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px #0003;
+  box-shadow: 0 2px 8px #d1b3ff;
   padding: 16px;
 }
 .table-area {
   flex: 1 1 400px;
   min-width: 350px;
   max-width: 600px;
-  background: #23273a;
+  background: #f3eaff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px #0003;
+  box-shadow: 0 2px 8px #d1b3ff;
   padding: 16px;
 }
 .table-area table {
   table-layout: fixed;
   word-break: break-all;
-  background: #23273a;
-  color: #fff;
+  background: #f3eaff;
+  color: #4b2e6d;
 }
 .table-area th,
 .table-area td {
   padding-left: 0;
   padding-right: 0;
-  background: #23273a;
-  color: #fff;
+  background: #f3eaff;
+  color: #4b2e6d;
 }
 .table-area td:nth-child(2),
 .table-area th:nth-child(2) {
@@ -79,28 +98,28 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 16px;
-  background: #23273a;
-  color: #fff;
+  background: #f3eaff;
+  color: #4b2e6d;
 }
 th,
 td {
-  border: 1px solid #393e54;
+  border: 1px solid #cbb6f7;
   padding: 8px 0;
   text-align: center;
 }
 th {
-  background: #23273a;
-  color: #b7b9c9;
+  background: #e3d0ff;
+  color: #7c4dff;
 }
 .section-title {
   margin-top: 40px;
   font-size: 1.3em;
-  color: #fff;
+  color: #7c4dff;
 }
 .tx-table {
   margin-top: 8px;
-  background: #23273a;
-  color: #fff;
+  background: #f3eaff;
+  color: #4b2e6d;
 }
 .tx-table td,
 .tx-table th {
@@ -108,13 +127,13 @@ th {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: #23273a;
-  color: #fff;
+  background: #f3eaff;
+  color: #4b2e6d;
 }
-a { color: #a97cff; text-decoration: none; }
+a { color: #7c4dff; text-decoration: none; }
 a:hover { text-decoration: underline; }
-.collapsible { color: #fff; background: #2d3146; border-radius: 6px; padding: 4px 12px; margin-bottom: 4px; display: inline-block; }
-.collapsible b { color: #fff; }
+.collapsible { color: #4b2e6d; background: #e3d0ff; border-radius: 6px; padding: 4px 12px; margin-bottom: 4px; display: inline-block; }
+.collapsible b { color: #7c4dff; }
 .collapsible.collapsed b { color: #b7b9c9; }
 .mb-16 { margin-bottom: 16px; }
 .mt-16 { margin-top: 16px; }
@@ -123,4 +142,26 @@ a:hover { text-decoration: underline; }
 }
 .collapsible.collapsed + .collapsible-content {
   display: none !important;
+}
+/* 捐贈區塊 */
+.footer-donate {
+  background: #e3d0ff;
+  color: #4b2e6d;
+  text-align: center;
+  padding: 24px 0 16px 0;
+  font-size: 1.1em;
+  margin-top: 48px;
+  border-top: 2px solid #cbb6f7;
+}
+.donate-addr {
+  font-family: 'Consolas', 'Menlo', 'Monaco', monospace;
+  font-size: 1.15em;
+  background: #f6f3ff;
+  color: #7c4dff;
+  padding: 8px 18px;
+  border-radius: 8px;
+  margin: 12px auto 0 auto;
+  display: inline-block;
+  letter-spacing: 1px;
+  word-break: break-all;
 }
