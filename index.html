@@ -12,14 +12,23 @@
   </head>
   <body>
     <div class="container">
-      <h1>
-        <img
-          src="assets\satoshicash.webp"
-          alt="SCASH Logo"
-          style="height: 48px; vertical-align: middle; margin-right: 12px"
-        />
-        SCASH 地址余额看板
-      </h1>
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        "
+      >
+        <h1 style="margin-bottom: 0">
+          <img
+            src="assets/satoshicash.webp"
+            alt="SCASH Logo"
+            style="height: 48px; vertical-align: middle; margin-right: 12px"
+          />
+          SCASH 地址余额看板
+        </h1>
+        <div id="refreshTime" class="refresh-time"></div>
+      </div>
       <div class="flex">
         <div class="chart-area">
           <canvas
@@ -38,14 +47,14 @@
             <table id="rankTable10">
               <thead>
                 <tr>
-                  <th>排名</th>
+                  <th class="rank-col">排名</th>
                   <th>地址</th>
                   <th>余额</th>
                   <th>变动数量</th>
                   <th>更新时间</th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody class="scrollable-tbody"></tbody>
             </table>
           </div>
           <div class="mt-16 collapsible" data-target="rankTable50">
@@ -55,14 +64,14 @@
             <table id="rankTable50">
               <thead>
                 <tr>
-                  <th>排名</th>
+                  <th class="rank-col">排名</th>
                   <th>地址</th>
                   <th>余额</th>
                   <th>变动数量</th>
                   <th>更新时间</th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody class="scrollable-tbody"></tbody>
             </table>
           </div>
           <div class="mt-16 collapsible" data-target="rankTable100">
@@ -72,14 +81,14 @@
             <table id="rankTable100">
               <thead>
                 <tr>
-                  <th>排名</th>
+                  <th class="rank-col">排名</th>
                   <th>地址</th>
                   <th>余额</th>
                   <th>变动数量</th>
                   <th>更新时间</th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody class="scrollable-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -99,6 +108,41 @@
       </table>
     </div>
     <script>
+      // 自動刷新與右上角顯示刷新時間
+      function updateRefreshTime() {
+        const now = new Date();
+        const pad = (n) => n.toString().padStart(2, "0");
+        const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
+          now.getDate()
+        )} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(
+          now.getSeconds()
+        )}`;
+        document.getElementById(
+          "refreshTime"
+        ).textContent = `刷新时间：${timeStr}`;
+      }
+      let countdown = 60;
+      function resetCountdown() {
+        countdown = 60;
+      }
+      updateRefreshTime();
+      setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+          location.reload();
+        } else {
+          updateRefreshTime();
+        }
+      }, 1000);
+      // 點擊刷新時間手動刷新並重置倒數
+      document.getElementById("refreshTime").onclick = function () {
+        resetCountdown();
+        location.reload();
+      };
+      // 手動刷新（F5）時自動重置倒數（瀏覽器自動重載會重設變數）
+      window.addEventListener("keydown", function (e) {
+        if (e.key === "F5") resetCountdown();
+      });
       // 修正折叠排行榜表格功能
       document.addEventListener("DOMContentLoaded", function () {
         // 默认只展开前10名
@@ -118,9 +162,10 @@
             wrap.style.opacity = "1";
             wrap.style.pointerEvents = "auto";
           }
-          btn.addEventListener("click", function () {
-            btn.classList.toggle("collapsed");
-            if (btn.classList.contains("collapsed")) {
+          btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            const isCollapsed = btn.classList.toggle("collapsed");
+            if (isCollapsed) {
               btn.innerHTML = btn.innerHTML.replace("▼", "▲");
               wrap.style.maxHeight = "0";
               wrap.style.opacity = "0.2";
@@ -139,34 +184,55 @@
       function renderPieChart() {
         const ctx = document.getElementById("pieChart").getContext("2d");
         const top10 = addressBalances.slice(0, 10);
-        const labels = top10.map((x) => x.address);
-        const data = top10.map((x) => x.balance);
-        new Chart(ctx, {
+        const group11_50 = addressBalances.slice(10, 50);
+        const group51_100 = addressBalances.slice(50, 100);
+        const sum11_50 = group11_50.reduce((a, b) => a + b.balance, 0);
+        const sum51_100 = group51_100.reduce((a, b) => a + b.balance, 0);
+        // 用於標籤顯示
+        const labels = [
+          ...top10.map(
+            (x, i) =>
+              `#${i + 1} ${
+                x.address.length > 12
+                  ? x.address.slice(0, 6) + "..." + x.address.slice(-4)
+                  : x.address
+              }`
+          ),
+          "第11~50名合计",
+          "第51~100名合计",
+        ];
+        const data = [...top10.map((x) => x.balance), sum11_50, sum51_100];
+        const colors = [
+          "#4e79a7",
+          "#f28e2b",
+          "#e15759",
+          "#76b7b2",
+          "#59a14f",
+          "#edc949",
+          "#af7aa1",
+          "#ff9da7",
+          "#9c755f",
+          "#bab0ab",
+          "#b39ddb", // 11-50
+          "#ce93d8", // 51-100
+        ];
+        // 先移除舊的canvas事件
+        ctx.canvas.onclick = null;
+        const chart = new Chart(ctx, {
           type: "pie",
           data: {
             labels: labels,
             datasets: [
               {
                 data: data,
-                backgroundColor: [
-                  "#4e79a7",
-                  "#f28e2b",
-                  "#e15759",
-                  "#76b7b2",
-                  "#59a14f",
-                  "#edc949",
-                  "#af7aa1",
-                  "#ff9da7",
-                  "#9c755f",
-                  "#bab0ab",
-                ],
+                backgroundColor: colors,
               },
             ],
           },
           options: {
             plugins: {
               legend: { position: "bottom" },
-              title: { display: true, text: "前10大地址余额分布" },
+              title: { display: true, text: "前10+分组地址余额分布" },
               datalabels: {
                 color: "#fff",
                 font: { weight: "bold", size: 16 },
@@ -179,6 +245,27 @@
                   return percent > 2 ? percent.toFixed(1) + "%" : "";
                 },
               },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    // 顯示完整地址
+                    if (context.dataIndex < 10) {
+                      const addr = addressBalances[context.dataIndex].address;
+                      return `${context.label}: ${addr} (${context.parsed})`;
+                    }
+                    return `${context.label}: ${context.parsed}`;
+                  },
+                },
+              },
+            },
+            onClick: (e, elements) => {
+              if (elements.length > 0) {
+                const idx = elements[0].index;
+                if (idx < 10) {
+                  const addr = addressBalances[idx].address;
+                  window.open(`https://scash.one/?search=${addr}`, "_blank");
+                }
+              }
             },
           },
           plugins: [ChartDataLabels],
@@ -192,19 +279,33 @@
         tbody10.innerHTML = "";
         addressBalances.slice(0, 10).forEach((x, i) => {
           const tr = document.createElement("tr");
-          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='word-break:break-all;max-width:700px;display:inline-block;'>${x.address}</a>`;
+          // 地址顯示前6...後4
+          const shortAddr =
+            x.address.length > 12
+              ? `${x.address.slice(0, 6)}...${x.address.slice(-4)}`
+              : x.address;
+          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' title='${x.address}' style='word-break:break-all;max-width:700px;display:inline-block;'>${shortAddr}</a>`;
           let changeCell = "";
           let updateTime = x.update_time || x.scan_time || "";
-          let updateDate = updateTime ? updateTime.split(" ")[0] : "";
-          let updateTimeCell = updateTime
-            ? `<span class='fold-time' style='cursor:pointer;color:#0074d9;' title='點擊展開/收合'>${updateDate}</span><span class='full-time' style='display:none;'>${updateTime}</span>`
-            : "";
+          // 轉換格式 yyyy-MM-dd HH:mm:ss -> yyyy/MM/dd HH:mm
+          let updateDate = "";
+          if (updateTime) {
+            const dt = updateTime.split(" ");
+            if (dt.length === 2) {
+              const d = dt[0].replace(/-/g, "/");
+              const t = dt[1].slice(0, 5);
+              updateDate = `${d} ${t}`;
+            } else {
+              updateDate = updateTime.replace(/-/g, "/");
+            }
+          }
+          let updateTimeCell = updateTime ? updateDate : "";
           if (x.change_str && x.change_str !== "0" && x.update_time) {
             changeCell = `${x.change_str} <br><span style='font-size:0.9em;color:#888'>${x.update_time}</span>`;
           } else {
             changeCell = "±0";
           }
-          tr.innerHTML = `<td>${
+          tr.innerHTML = `<td class='rank-col'>${
             i + 1
           }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${Math.round(
             x.balance
@@ -217,7 +318,11 @@
         tbody50.innerHTML = "";
         addressBalances.slice(10, 50).forEach((x, i) => {
           const tr = document.createElement("tr");
-          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='word-break:break-all;max-width:700px;display:inline-block;'>${x.address}</a>`;
+          const shortAddr =
+            x.address.length > 12
+              ? `${x.address.slice(0, 6)}...${x.address.slice(-4)}`
+              : x.address;
+          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' title='${x.address}' style='word-break:break-all;max-width:700px;display:inline-block;'>${shortAddr}</a>`;
           let changeCell = "";
           let updateTime = x.update_time || x.scan_time || "";
           let updateDate = updateTime ? updateTime.split(" ")[0] : "";
@@ -229,7 +334,7 @@
           } else {
             changeCell = "±0";
           }
-          tr.innerHTML = `<td>${
+          tr.innerHTML = `<td class='rank-col'>${
             i + 11
           }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${Math.round(
             x.balance
@@ -242,7 +347,11 @@
         tbody100.innerHTML = "";
         addressBalances.slice(50, 100).forEach((x, i) => {
           const tr = document.createElement("tr");
-          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='word-break:break-all;max-width:700px;display:inline-block;'>${x.address}</a>`;
+          const shortAddr =
+            x.address.length > 12
+              ? `${x.address.slice(0, 6)}...${x.address.slice(-4)}`
+              : x.address;
+          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' title='${x.address}' style='word-break:break-all;max-width:700px;display:inline-block;'>${shortAddr}</a>`;
           let changeCell = "";
           let updateTime = x.update_time || x.scan_time || "";
           let updateDate = updateTime ? updateTime.split(" ")[0] : "";
@@ -254,7 +363,7 @@
           } else {
             changeCell = "±0";
           }
-          tr.innerHTML = `<td>${
+          tr.innerHTML = `<td class='rank-col'>${
             i + 51
           }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${Math.round(
             x.balance
