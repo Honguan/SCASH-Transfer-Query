@@ -314,20 +314,84 @@ def process_txid(txid):
             print(f"  地址: {address}  金額: {amount} SCASH")
 
 def main():
-    print("選擇模式：")
-    print("1. 自動查詢模式 (可指定起始/結束區塊高度，結束高度預設查不到為止)")
-    print("2. 手動查詢模式 (輸入區塊高度/地址/TxID)")
-    mode = input("請輸入模式編號 (1/2): ").strip()
-    if mode == "1":
-        start = input("請輸入起始區塊高度 (預設 1): ").strip()
-        end = input("請輸入結束區塊高度 (留空則查到失敗為止): ").strip()
-        start_height = int(start) if start.isdigit() else 1
-        end_height = int(end) if end.isdigit() else None
-        auto_query_mode(start_height, end_height)
-    elif mode == "2":
-        manual_query_mode()
-    else:
-        print("輸入錯誤，請重新執行。")
+    while True:
+        print("\n選擇模式：")
+        print("1. 自動查詢模式 (可指定起始/結束區塊高度，結束高度預設查不到為止)")
+        print("2. 手動查詢模式 (輸入區塊高度/地址/TxID)")
+        print("3. 設定檔設定模式 (修改 config.py 參數)")
+        print("0. 離開")
+        mode = input("請輸入模式編號 (1/2/3/0): ").strip()
+        if mode == "1":
+            start = input("請輸入起始區塊高度 (預設 1): ").strip()
+            end = input("請輸入結束區塊高度 (留空則查到失敗為止): ").strip()
+            start_height = int(start) if start.isdigit() else 1
+            end_height = int(end) if end.isdigit() else None
+            auto_query_mode(start_height, end_height)
+        elif mode == "2":
+            manual_query_mode()
+        elif mode == "3":
+            config_setting_mode()
+        elif mode == "0":
+            print("程式結束。")
+            break
+        else:
+            print("輸入錯誤，請重新輸入。")
+
+# 設定檔設定模式
+def config_setting_mode():
+    import ast
+    config_path = os.path.join(os.path.dirname(__file__), 'config.py')
+    # 讀取現有設定
+    with open(config_path, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    # 解析現有設定
+    config_vars = {}
+    for line in lines:
+        if '=' in line and not line.strip().startswith('#'):
+            key, val = line.split('=', 1)
+            key = key.strip()
+            val = val.strip().split('#')[0].strip()
+            try:
+                config_vars[key] = ast.literal_eval(val)
+            except Exception:
+                config_vars[key] = val.strip('"\'')
+    while True:
+        print("\n目前設定：")
+        for k, v in config_vars.items():
+            print(f"{k} = {v}")
+        print("\n可修改參數：")
+        for idx, k in enumerate(config_vars.keys(), 1):
+            print(f"{idx}. {k}")
+        print("0. 儲存並返回主選單")
+        sel = input("請輸入要修改的參數編號 (或 0 返回): ").strip()
+        if sel == "0":
+            # 寫回 config.py
+            with open(config_path, 'w', encoding='utf-8') as f:
+                for line in lines:
+                    if '=' in line and not line.strip().startswith('#'):
+                        key = line.split('=', 1)[0].strip()
+                        if key in config_vars:
+                            f.write(f"{key} = {repr(config_vars[key])}\n")
+                        else:
+                            f.write(line)
+                    else:
+                        f.write(line)
+            print("設定已儲存，返回主選單。\n")
+            break
+        try:
+            idx = int(sel) - 1
+            if idx < 0 or idx >= len(config_vars):
+                print("參數編號錯誤，請重新輸入。")
+                continue
+            key = list(config_vars.keys())[idx]
+            new_val = input(f"請輸入新的值 ({key}，目前值: {config_vars[key]}): ").strip()
+            # 嘗試自動型別轉換
+            try:
+                config_vars[key] = ast.literal_eval(new_val)
+            except Exception:
+                config_vars[key] = new_val
+        except Exception:
+            print("輸入錯誤，請重新輸入。")
 
 if __name__ == "__main__":
     main()
