@@ -449,13 +449,36 @@
     </script>
     <!-- 底部紫色版权区块 -->
     <div class="footer-copyright">
-      SatoshiCash社区 中本聪现金中文电报社区赞助开发 Copyright 2025-2125 ｜
+      SatoshiCash社区 中本聪现金中文电报社区赞助开发 Copyright 2025-2125 ｜ 
       <a
-        href="https://github.com/Honguan/SCASH-Transfer-Query"
-        target="_blank"
-        rel="noopener"
-        >GitHub 项目链接</a
+      href="https://github.com/Honguan/SCASH-Transfer-Query"
+      target="_blank"
+      rel="noopener"
+      >GitHub 项目链接</a
       >
+      <span style="margin-left:16px;">
+      捐赠地址：
+      <span id="donateAddr" style="user-select:all;cursor:pointer;">
+      scash1...9dlzn
+      </span>
+      <button id="copyDonateBtn" style="margin-left:4px;padding:1px 7px;font-size:0.88em;cursor:pointer;background:#f8bbf5;color:#5e35b1;border:1px solid #d1c4e9;border-radius:4px;transition:background 0.2s;">
+      复制
+      </button>
+      <span id="copySuccess" style="color:rgb(237, 208, 249);display:none;margin-left:6px;">复制成功</span>
+      </span>
+      <script>
+      document.getElementById('copyDonateBtn').onclick = function() {
+      const addr = 'scash1qxz7d3gf9yhequz4v9h0tqkcrrlv5a4nps9dlzn';
+      navigator.clipboard.writeText(addr).then(function() {
+      const tip = document.getElementById('copySuccess');
+      tip.style.display = '';
+      setTimeout(() => { tip.style.display = 'none'; }, 1200);
+      });
+      };
+      document.getElementById('donateAddr').onclick = function() {
+      document.getElementById('copyDonateBtn').click();
+      };
+      </script>
     </div>
   </body>
 </html>
