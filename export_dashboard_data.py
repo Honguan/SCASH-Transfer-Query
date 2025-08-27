@@ -33,7 +33,8 @@ with sqlite3.connect(DB_FILE) as conn:
 
 # 輸出到 dashboard_data.js
 with open('assets/dashboard_data.js', 'w', encoding='utf-8') as f:
-    f.write('const addressBalances = ' + json.dumps(addressBalances, ensure_ascii=False) + ';\n')
-    f.write('const txRecords = ' + json.dumps(txRecords, ensure_ascii=False) + ';\n')
+
+    f.write('const addressBalances = ' + json.dumps(addressBalances, ensure_ascii=False, indent=2) + ';\n')
+    f.write('const txRecords = ' + json.dumps(txRecords, ensure_ascii=False, indent=2) + ';\n')
 
 print('已匯出 assets/dashboard_data.js，可直接在 scash_dashboard.html 引入！')

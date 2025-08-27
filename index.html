@@ -7,7 +7,25 @@
     <link rel="icon" type="image/png" href="assets\satoshicash.webp" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-    <script src="assets/dashboard_data.js"></script>
+    <script>
+      
+      // 動態插入 dashboard_data.js，並加上隨機參數防快取
+      const script = document.createElement('script');
+      script.src = 'assets/dashboard_data.js?v=' + Math.random().toString(36).substring(2, 10);
+      script.onload = function() {
+        // dashboard_data.js 載入完成後再初始化
+        console.log('addressBalances', addressBalances);
+        
+        renderPieChart();
+        renderRankTables();
+        renderTxTable();
+        
+      };
+      document.head.appendChild(script);
+      
+    </script>
+      <!-- document.head.appendChild(script); -->
+    </script>
     <link rel="stylesheet" href="assets/dashboard.css" />
   </head>
   <body>
@@ -392,9 +410,7 @@
           }
         }
         // 过滤出这20个区块的所有记录（由新到旧排序）
-        const showRecords = txRecords.filter((x) =>
-          last20Blocks.includes(x.block_height)
-        );
+        const showRecords = txRecords;
         showRecords.forEach((x) => {
           const tr = document.createElement("tr");
           const blockLink = `<a href='https://scash.one/?search=${x.block_height}' target='_blank' rel='noopener'>${x.block_height}</a>`;
@@ -405,10 +421,7 @@
         });
       }
 
-      // 初始化
-      renderPieChart();
-      renderRankTables();
-      renderTxTable();
+  // ...初始化已移至 dashboard_data.js 載入完成後...
 
       // 折叠/展开更新时间
       document.addEventListener("click", function (e) {
