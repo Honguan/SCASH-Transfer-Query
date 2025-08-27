@@ -225,6 +225,7 @@ def record_address_balance(address, address_balance_set, conn=None):
 def auto_query_mode(start_height, end_height=None):
     height = start_height
     address_balance_set = set()
+    scanned_count = 0
     while True:
         try:
             if end_height is not None and height > end_height:
@@ -234,7 +235,18 @@ def auto_query_mode(start_height, end_height=None):
             result = process_and_record_block(height, address_balance_set)
             if result:
                 height += 1
-                time.sleep(SCAN_INTERVAL)
+                scanned_count += 1
+                if scanned_count % 10 == 0:
+                    print("\n已掃描10個區塊，自動匯出 dashboard_data.js ...")
+                    # 執行 export_dashboard_data.py 並移動檔案
+                    import subprocess, shutil, os
+                    subprocess.run([sys.executable, 'export_dashboard_data.py'], check=True)
+                    src = os.path.join(os.path.dirname(__file__), 'dashboard_data.js')
+                    dst_dir = os.path.join(os.path.dirname(__file__), 'assets')
+                    dst = os.path.join(dst_dir, 'dashboard_data.js')
+                    if os.path.exists(src):
+                        shutil.move(src, dst)
+                        print(f"dashboard_data.js 已移動到 {dst}")
             else:
                 print("查詢失敗或查不到，10分鐘後重試本區塊...")
                 for i in range(10*60, 0, -1):
