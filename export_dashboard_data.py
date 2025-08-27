@@ -22,7 +22,7 @@ with sqlite3.connect(DB_FILE) as conn:
 txRecords = []
 with sqlite3.connect(DB_FILE) as conn:
     c = conn.cursor()
-    for row in c.execute('SELECT block_height, txid, address, amount, transfer_time FROM tx ORDER BY block_height DESC, amount DESC'):
+    for row in c.execute('SELECT block_height, txid, address, amount, transfer_time FROM tx WHERE amount > 500 ORDER BY block_height DESC, amount DESC'):
         txRecords.append({
             'block_height': row[0],
             'txid': row[1],
