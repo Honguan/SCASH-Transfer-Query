@@ -6,7 +6,7 @@ import csv
 import os
 from datetime import datetime
 import time
-from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, CSV_FILE, ADDRESS_BALANCE_FILE, SHOW_RESULT
+from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, CSV_FILE, ADDRESS_BALANCE_FILE, SHOW_RESULT, SCAN_INTERVAL
 
 def fetch_html(url, retries=10, retry_interval=3):
     for attempt in range(1, retries + 1):
@@ -171,7 +171,7 @@ def write_address_balance_csv(address, balance):
             writer.writerow(["Address", "Balance"])
             writer.writerows(rows)
 
-def auto_query_mode(start_height, end_height=None, interval=0.1):
+def auto_query_mode(start_height, end_height=None):
     height = start_height
     address_balance_set = set()
     while True:
@@ -183,7 +183,7 @@ def auto_query_mode(start_height, end_height=None, interval=0.1):
             print("查詢失敗或無法繼續，結束自動查詢模式。")
             break
         height += 1
-        time.sleep(interval)
+        time.sleep(SCAN_INTERVAL)
 
 def process_and_record_block(block_height, address_balance_set):
     """查詢區塊、記錄轉帳與地址餘額，回傳True/False代表是否繼續。"""
@@ -321,14 +321,9 @@ def main():
     if mode == "1":
         start = input("請輸入起始區塊高度 (預設 1): ").strip()
         end = input("請輸入結束區塊高度 (留空則查到失敗為止): ").strip()
-        interval = input("請輸入查詢間隔秒數 (預設 0.1): ").strip()
         start_height = int(start) if start.isdigit() else 1
         end_height = int(end) if end.isdigit() else None
-        try:
-            interval_sec = float(interval) if interval else 0.1
-        except ValueError:
-            interval_sec = 0.1
-        auto_query_mode(start_height, end_height, interval_sec)
+        auto_query_mode(start_height, end_height)
     elif mode == "2":
         manual_query_mode()
     else:
