@@ -18,7 +18,7 @@
           alt="SCASH Logo"
           style="height: 48px; vertical-align: middle; margin-right: 12px"
         />
-        SCASH Address Balances Dashboard
+        SCASH 地址余额看板
       </h1>
       <div class="flex">
         <div class="chart-area">
@@ -30,7 +30,7 @@
           ></canvas>
         </div>
         <div class="table-area">
-          <h2>地址餘額排行榜</h2>
+          <h2>地址余额排行榜</h2>
           <div class="mb-16 collapsible" data-target="rankTable10">
             <b>前10名 ▼</b>
           </div>
@@ -40,9 +40,9 @@
                 <tr>
                   <th>排名</th>
                   <th>地址</th>
-                  <th>餘額</th>
-                  <th>變動數量</th>
-                  <th>更新時間</th>
+                  <th>余额</th>
+                  <th>变动数量</th>
+                  <th>更新时间</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -57,9 +57,9 @@
                 <tr>
                   <th>排名</th>
                   <th>地址</th>
-                  <th>餘額</th>
-                  <th>變動數量</th>
-                  <th>更新時間</th>
+                  <th>余额</th>
+                  <th>变动数量</th>
+                  <th>更新时间</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -74,9 +74,9 @@
                 <tr>
                   <th>排名</th>
                   <th>地址</th>
-                  <th>餘額</th>
-                  <th>變動數量</th>
-                  <th>更新時間</th>
+                  <th>余额</th>
+                  <th>变动数量</th>
+                  <th>更新时间</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -84,24 +84,24 @@
           </div>
         </div>
       </div>
-      <div class="section-title">大額轉帳紀錄（block & tx）</div>
+      <div class="section-title">大额转账记录（block & tx）</div>
       <table class="tx-table" id="txTable">
         <thead>
           <tr>
-            <th>區塊高度</th>
+            <th>区块高度</th>
             <th>TxID</th>
             <th>地址</th>
-            <th>金額</th>
-            <th>時間</th>
+            <th>金额</th>
+            <th>时间</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
     <script>
-      // 修正摺疊排行榜表格功能
+      // 修正折叠排行榜表格功能
       document.addEventListener("DOMContentLoaded", function () {
-        // 預設只展開前10名
+        // 默认只展开前10名
         document.querySelectorAll(".collapsible").forEach(function (btn, idx) {
           const target = btn.getAttribute("data-target");
           const wrap = document.getElementById("wrap-" + target);
@@ -166,7 +166,7 @@
           options: {
             plugins: {
               legend: { position: "bottom" },
-              title: { display: true, text: "前10大地址餘額分布" },
+              title: { display: true, text: "前10大地址余额分布" },
               datalabels: {
                 color: "#fff",
                 font: { weight: "bold", size: 16 },
@@ -185,7 +185,7 @@
         });
       }
 
-      // 排行榜三區表格
+      // 排行榜三区表格
       function renderRankTables() {
         // 前10
         const tbody10 = document.querySelector("#rankTable10 tbody");
@@ -263,12 +263,12 @@
         });
       }
 
-      // 大額轉帳紀錄表格
+      // 大额转账记录表格
       function renderTxTable() {
         const tbody = document.querySelector("#txTable tbody");
         tbody.innerHTML = "";
-        // 只顯示最後20個區塊的紀錄
-        // 先取得所有出現過的區塊高度，取最新20個
+        // 只显示最后20个区块的记录
+        // 先取得所有出现过的区块高度，取最新20个
         const blockSet = new Set();
         const last20Blocks = [];
         for (
@@ -282,7 +282,7 @@
             last20Blocks.unshift(blk);
           }
         }
-        // 過濾出這20個區塊的所有紀錄（由新到舊排序）
+        // 过滤出这20个区块的所有记录（由新到旧排序）
         const showRecords = txRecords.filter((x) =>
           last20Blocks.includes(x.block_height)
         );
@@ -301,7 +301,7 @@
       renderRankTables();
       renderTxTable();
 
-      // 折疊/展開更新時間
+      // 折叠/展开更新时间
       document.addEventListener("click", function (e) {
         if (e.target.classList.contains("fold-time")) {
           const fold = e.target;
@@ -323,15 +323,14 @@
         }
       });
     </script>
-    <!-- 底部紅色版權區塊 -->
+    <!-- 底部紫色版权区块 -->
     <div class="footer-copyright">
       SatoshiCash社区 中本聪现金中文电报社区赞助开发 Copyright 2025-2125 ｜
       <a
         href="https://github.com/Honguan/SCASH-Transfer-Query"
         target="_blank"
         rel="noopener"
-        >GitHub 专案连结</a
-      >
+        >GitHub 项目链接</a
       >
     </div>
   </body>
