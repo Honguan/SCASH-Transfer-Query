@@ -23,7 +23,7 @@ SCASH Transfer Query 是一個用於查詢 SCASH 區塊鏈資料、篩選大額�
 安裝所需套件：
 
 ```bash
-pip3 install beautifulsoup4
+pip3 install beautifulsoup4 flask flask_cors
 
 ```
 
