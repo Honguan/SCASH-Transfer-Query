@@ -3,3 +3,4 @@ scash_address_balances.csv
 __pycache__/config.cpython-310.pyc
 scash_data.db
 tempCodeRunnerFile.py
+scash_data.db-journal
