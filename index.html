@@ -53,7 +53,7 @@
             id="pieChart"
             width="420"
             height="420"
-            style="width: 420px; height: 420px; display: block; margin: 0 auto;"
+            style="width:420px;height:420px;display:block;margin:0 auto;max-width:none;max-height:none;"
           ></canvas>
         </div>
         <div class="table-area">
@@ -248,6 +248,8 @@
             ],
           },
           options: {
+            responsive: false, // 固定大小，不自動縮放
+            maintainAspectRatio: false,
             plugins: {
               legend: { position: "bottom" },
               title: { display: true, text: "前10+分组地址余额分布" },
