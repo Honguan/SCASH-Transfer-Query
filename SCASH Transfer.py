@@ -231,14 +231,18 @@ def auto_query_mode(start_height, end_height=None):
                 print("已達結束區塊高度，結束自動查詢模式。")
                 break
             print(f"\n查詢區塊高度: {height}")
-            if not process_and_record_block(height, address_balance_set):
-                print("查詢失敗或無法繼續，結束自動查詢模式。")
-                break
-            height += 1
-            time.sleep(SCAN_INTERVAL)
+            result = process_and_record_block(height, address_balance_set)
+            if result:
+                height += 1
+                time.sleep(SCAN_INTERVAL)
+            else:
+                print("查詢失敗或查不到，10分鐘後重試本區塊...")
+                for i in range(10*60, 0, -1):
+                    print(f"  等待 {i//60:02d}:{i%60:02d} 後重試...", end='\r')
+                    time.sleep(1)
+                print("\n重新嘗試掃描本區塊...")
         except KeyboardInterrupt:
             print("\n偵測到中斷 (Ctrl+C)，將完成本區塊查詢與寫入後詢問是否終止...")
-            # 這裡已經查詢完畢並寫入，詢問用戶
             while True:
                 user_choice = input("是否終止程序？(Y/n): ").strip().lower()
                 if user_choice == '' or user_choice == 'y':
