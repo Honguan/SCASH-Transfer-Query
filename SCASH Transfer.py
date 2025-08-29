@@ -6,7 +6,10 @@ import sqlite3
 import os
 from datetime import datetime
 import time
+import traceback
 from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, CSV_FILE, ADDRESS_BALANCE_FILE, SHOW_RESULT, SCAN_INTERVAL, DB_FILE
+
+
 def init_db():
     with sqlite3.connect(DB_FILE) as conn:
         c = conn.cursor()
@@ -51,6 +54,7 @@ def fetch_html(url, retries=10, retry_interval=3):
             else:
                 sys.exit(1)
 
+
 def get_timestamp(soup):
     time_div = soup.find("div", class_="fw-bold", string="Time")
     if not time_div:
@@ -63,21 +67,24 @@ def get_timestamp(soup):
     text = parent_div.get_text(separator=" ", strip=True)
     return text.replace("Time", "", 1).strip()
 
+
 def get_total_output_amount(soup):
     elem = soup.find(string=re.compile("Total amount in all outputs"))
     if not elem:
         print("無法找到總輸出金額")
-        sys.exit(1)
+        raise Exception("無法找到總輸出金額")
     parent = elem.find_parent("li")
     div = parent.find("div", class_="ms-2 me-auto") if parent else None
     if not div:
         print("無法找到金額區塊")
-        sys.exit(1)
-    match = re.search(r"([\d'\.]+)\s*SCASH", div.get_text(separator=" ", strip=True))
+        raise Exception("無法找到金額區塊")
+    match = re.search(r"([\d'\.]+)\s*SCASH",
+                      div.get_text(separator=" ", strip=True))
     if not match:
         print("無法解析 SCASH 數值")
-        sys.exit(1)
+        raise Exception("無法解析 SCASH 數值")
     return float(match.group(1).replace("'", ""))
+
 
 def find_txids_by_amount(soup, total_amount):
     """
@@ -95,7 +102,8 @@ def find_txids_by_amount(soup, total_amount):
     # 1. 優先找整數位相同的轉帳
     total_int = int(total_amount)
     for li in list_items:
-        badge = li.find("span", class_=lambda x: x and "badge" in x and "bg-primary" in x)
+        badge = li.find(
+            "span", class_=lambda x: x and "badge" in x and "bg-primary" in x)
         if not badge:
             continue
         match = re.search(r"([\d\.]+)\s*SCASH", badge.get_text(strip=True))
@@ -113,7 +121,8 @@ def find_txids_by_amount(soup, total_amount):
                     seen.add(txid)
     # 2. 其他大於閾值的轉帳
     for li in list_items:
-        badge = li.find("span", class_=lambda x: x and "badge" in x and "bg-primary" in x)
+        badge = li.find(
+            "span", class_=lambda x: x and "badge" in x and "bg-primary" in x)
         if not badge:
             continue
         match = re.search(r"([\d\.]+)\s*SCASH", badge.get_text(strip=True))
@@ -133,30 +142,40 @@ def find_txids_by_amount(soup, total_amount):
         print(f"找不到任何大於閾值 {THRESHOLD} SCASH 的轉帳")
     return txids
 
+
 def get_tx_outputs(txid):
     tx_url = f"{BASE_URL}/tx/{txid}"
     tx_soup = fetch_html(tx_url)
     outputs = []
-    total_outputs_li = tx_soup.find("div", class_="fw-bold", string=re.compile(r"Total outputs"))
+    total_outputs_li = tx_soup.find(
+        "div", class_="fw-bold", string=re.compile(r"Total outputs"))
     if total_outputs_li:
         parent_li = total_outputs_li.find_parent("li")
         if parent_li:
             amount_div = parent_li.find("div", class_="ms-2 me-auto")
             if amount_div:
-                match = re.search(r"([\d'\.]+)\s*SCASH", amount_div.get_text(separator=" ", strip=True))
+                match = re.search(
+                    r"([\d'\.]+)\s*SCASH", amount_div.get_text(separator=" ", strip=True))
                 if match and float(match.group(1).replace("'", "")) >= THRESHOLD:
                     for item in tx_soup.find_all("li", class_="list-group-item"):
-                        addr_a = item.find("a", href=re.compile(r"^/\?&search=scash1"))
+                        addr_a = item.find(
+                            "a", href=re.compile(r"^/\?&search=scash1"))
                         if addr_a:
-                            address = re.search(r"search=(scash1[0-9a-zA-Z]+)", addr_a['href'])
-                            full_address = address.group(1) if address else addr_a.get_text(strip=True)
-                            amount_span = item.find("span", class_="text-muted")
+                            address = re.search(
+                                r"search=(scash1[0-9a-zA-Z]+)", addr_a['href'])
+                            full_address = address.group(
+                                1) if address else addr_a.get_text(strip=True)
+                            amount_span = item.find(
+                                "span", class_="text-muted")
                             if amount_span:
-                                amount_match = re.search(r"([\d'\.]+)\s*SCASH", amount_span.get_text(strip=True))
+                                amount_match = re.search(
+                                    r"([\d'\.]+)\s*SCASH", amount_span.get_text(strip=True))
                                 if amount_match:
-                                    amount = float(amount_match.group(1).replace("'", ""))
+                                    amount = float(
+                                        amount_match.group(1).replace("'", ""))
                                     outputs.append((full_address, amount))
     return outputs
+
 
 def get_address_balance(address):
     url = f"{BASE_URL}/?search={address}&utxolookup=1"
@@ -165,7 +184,8 @@ def get_address_balance(address):
     if not total_div:
         print("找不到總餘額區塊")
         return None
-    match = re.search(r"Total unspent SCASH:\s*([\d\.]+)", total_div.get_text())
+    match = re.search(
+        r"Total unspent SCASH:\s*([\d\.]+)", total_div.get_text())
     if not match:
         print("無法解析總餘額")
         return None
@@ -214,6 +234,7 @@ def write_address_balance_db(address, balance, conn=None):
         conn.commit()
         conn.close()
 
+
 def record_address_balance(address, address_balance_set, conn=None):
     """查詢並記錄唯一地址餘額。"""
     if address_balance_set is not None and address not in address_balance_set:
@@ -222,26 +243,36 @@ def record_address_balance(address, address_balance_set, conn=None):
             address_balance_set.add(address)
             write_address_balance_db(address, balance, conn)
 
+
 def auto_query_mode(start_height, end_height=None):
     height = start_height
     address_balance_set = set()
     scanned_count = 0
     while True:
         try:
+            # 若有設定結束高度，查到即結束；否則永遠不會自動結束，需手動 Ctrl+C 停止
             if end_height is not None and height > end_height:
                 print("已達結束區塊高度，結束自動查詢模式。")
                 break
             print(f"\n查詢區塊高度: {height}")
-            result = process_and_record_block(height, address_balance_set)
+            try:
+                result = process_and_record_block(height, address_balance_set)
+            except Exception as e:
+                # 只顯示簡訊息，不顯示 traceback
+                print(f"查詢區塊 {height} 發生錯誤: {e}")
+                result = False
             if result:
                 height += 1
                 scanned_count += 1
                 if scanned_count % 10 == 0:
                     print("\n已掃描10個區塊，自動匯出 dashboard_data.js ...")
-                    # 執行 export_dashboard_data.py 並移動檔案
-                    import subprocess, shutil, os
-                    subprocess.run([sys.executable, 'export_dashboard_data.py'], check=True)
-                    src = os.path.join(os.path.dirname(__file__), 'dashboard_data.js')
+                    import subprocess
+                    import shutil
+                    import os
+                    subprocess.run(
+                        [sys.executable, 'export_dashboard_data.py'], check=True)
+                    src = os.path.join(os.path.dirname(
+                        __file__), 'dashboard_data.js')
                     dst_dir = os.path.join(os.path.dirname(__file__), 'assets')
                     dst = os.path.join(dst_dir, 'dashboard_data.js')
                     if os.path.exists(src):
@@ -249,22 +280,17 @@ def auto_query_mode(start_height, end_height=None):
                         print(f"dashboard_data.js 已移動到 {dst}")
             else:
                 print("查詢失敗或查不到，10分鐘後重試本區塊...")
-                for i in range(10*60, 0, -1):
+                for i in range(10 * 60, 0, -1):
                     print(f"  等待 {i//60:02d}:{i%60:02d} 後重試...", end='\r')
                     time.sleep(1)
                 print("\n重新嘗試掃描本區塊...")
         except KeyboardInterrupt:
-            print("\n偵測到中斷 (Ctrl+C)，將完成本區塊查詢與寫入後詢問是否終止...")
-            while True:
-                user_choice = input("是否終止程序？(Y/n): ").strip().lower()
-                if user_choice == '' or user_choice == 'y':
-                    print("程式已終止。")
-                    return
-                elif user_choice == 'n':
-                    print("繼續查詢...")
-                    break
-                else:
-                    print("請輸入 Y 或 n。直接 Enter 預設為 Y。")
+            print("\n偵測到中斷 (Ctrl+C)，將完成本區塊查詢與寫入後結束。")
+            break
+        except Exception as e:
+            print(f"查詢區塊 {height} 發生未預期錯誤: {e}")
+            return False
+
 
 def process_and_record_block(block_height, address_balance_set):
     """查詢區塊、記錄轉帳與地址餘額，回傳True/False代表是否繼續。"""
@@ -277,7 +303,8 @@ def process_and_record_block(block_height, address_balance_set):
         time_str = get_timestamp(soup)
         if total_amount < THRESHOLD:
             if SHOW_RESULT:
-                print(f"總轉帳金額 {total_amount} SCASH 未達閾值 {THRESHOLD} SCASH，跳過後續查詢。")
+                print(
+                    f"總轉帳金額 {total_amount} SCASH 未達閾值 {THRESHOLD} SCASH，跳過後續查詢。")
             return True
         if SHOW_RESULT:
             print(f"區塊高度: {block_height}")
@@ -289,7 +316,8 @@ def process_and_record_block(block_height, address_balance_set):
         # 寫入 block、tx、address_balance 都共用同一個 conn
         with sqlite3.connect(DB_FILE) as conn:
             c = conn.cursor()
-            c.execute('INSERT OR REPLACE INTO block (block_height, txids) VALUES (?, ?)', (block_height, json.dumps(txids)))
+            c.execute('INSERT OR REPLACE INTO block (block_height, txids) VALUES (?, ?)',
+                      (block_height, json.dumps(txids)))
             for txid in txids:
                 if SHOW_RESULT:
                     print(f"轉帳 TxID: {txid}")
@@ -325,6 +353,7 @@ def manual_query_mode():
         else:
             print("輸入格式錯誤，請重新輸入。")
 
+
 def process_block(block_height, address_balance_set=None):
     try:
         block_url = f"{BASE_URL}/?search={block_height}"
@@ -333,7 +362,8 @@ def process_block(block_height, address_balance_set=None):
         time_str = get_timestamp(soup)
         if total_amount < THRESHOLD:
             if SHOW_RESULT:
-                print(f"總轉帳金額 {total_amount} SCASH 未達閾值 {THRESHOLD} SCASH，跳過後續查詢。")
+                print(
+                    f"總轉帳金額 {total_amount} SCASH 未達閾值 {THRESHOLD} SCASH，跳過後續查詢。")
             return True
         if SHOW_RESULT:
             print(f"區塊高度: {block_height}")
@@ -373,6 +403,7 @@ def process_block(block_height, address_balance_set=None):
         print(f"查詢區塊 {block_height} 發生錯誤: {e}")
         return False
 
+
 def process_address(address):
     balance = get_address_balance(address)
     if SHOW_RESULT:
@@ -380,6 +411,7 @@ def process_address(address):
             print(f"地址 {address} 目前持有 SCASH: {balance}")
         else:
             print("查詢失敗，請確認地址正確。")
+
 
 def process_txid(txid):
     outputs = get_tx_outputs(txid)
@@ -390,6 +422,7 @@ def process_txid(txid):
         print(f"TxID: {txid} 的輸出地址與金額：")
         for address, amount in outputs:
             print(f"  地址: {address}  金額: {amount} SCASH")
+
 
 def main():
     init_db()
@@ -417,6 +450,8 @@ def main():
             print("輸入錯誤，請重新輸入。")
 
 # 設定檔設定模式
+
+
 def config_setting_mode():
     import ast
     config_path = os.path.join(os.path.dirname(__file__), 'config.py')
@@ -463,7 +498,8 @@ def config_setting_mode():
                 print("參數編號錯誤，請重新輸入。")
                 continue
             key = list(config_vars.keys())[idx]
-            new_val = input(f"請輸入新的值 ({key}，目前值: {config_vars[key]}): ").strip()
+            new_val = input(
+                f"請輸入新的值 ({key}，目前值: {config_vars[key]}): ").strip()
             # 嘗試自動型別轉換
             try:
                 config_vars[key] = ast.literal_eval(new_val)
@@ -471,6 +507,47 @@ def config_setting_mode():
                 config_vars[key] = new_val
         except Exception:
             print("輸入錯誤，請重新輸入。")
+
+
+def find_total_output_amount_until_found(block_height, retry_minutes=10):
+    """
+    持續查找指定區塊的總輸出金額，找不到時每 retry_minutes 分鐘自動重試，直到找到或手動停止。
+    """
+    import traceback
+    while True:
+        try:
+            print(f"查詢區塊 {block_height} 的總輸出金額...")
+            block_url = f"{BASE_URL}/?search={block_height}"
+            soup = fetch_html(block_url)
+            amount = None
+            try:
+                amount = get_total_output_amount(soup)
+            except SystemExit:
+                amount = None
+            if amount is not None:
+                print(f"區塊 {block_height} 的總輸出金額為: {amount} SCASH")
+                return amount
+            else:
+                print(
+                    f"無法找到區塊 {block_height} 的總輸出金額，{retry_minutes} 分鐘後自動重試...")
+                for i in range(retry_minutes*60, 0, -1):
+                    print(
+                        f"  等待 {i//60:02d}:{i%60:02d} 後重試... (Ctrl+C 可中止)", end='\r')
+                    time.sleep(1)
+                print("\n重新嘗試...")
+        except KeyboardInterrupt:
+            print("\n偵測到中斷 (Ctrl+C)，已停止自動查詢。")
+            break
+        except Exception as e:
+            print(f"查詢過程發生錯誤: {e}")
+            traceback.print_exc()
+            print(f"{retry_minutes} 分鐘後自動重試...")
+            for i in range(retry_minutes*60, 0, -1):
+                print(
+                    f"  等待 {i//60:02d}:{i%60:02d} 後重試... (Ctrl+C 可中止)", end='\r')
+                time.sleep(1)
+            print("\n重新嘗試...")
+
 
 if __name__ == "__main__":
     main()
