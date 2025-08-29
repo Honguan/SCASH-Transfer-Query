@@ -326,8 +326,13 @@
             }
           }
           let updateTimeCell = updateTime ? updateDate : "";
-          if (x.change_str && x.change_str !== "0" && x.update_time) {
-            changeCell = `${x.change_str} <br><span style='font-size:0.9em;color:#888'>${x.update_time}</span>`;
+          let hasChange = x.change_str && x.change_str !== "0" && x.update_time;
+          if (hasChange) {
+            let num = parseFloat(x.change_str);
+            let str = (Math.round(num * 100) / 100).toFixed(2);
+            if (num > 0) str = "+" + str;
+            changeCell = str;
+            updateTimeCell = `<span style='color:#7c4dff;'>${updateDate}</span>`;
           } else {
             changeCell = "±0";
           }
@@ -364,8 +369,13 @@
             }
           }
           let updateTimeCell = updateTime ? updateDate : "";
-          if (x.change_str && x.change_str !== "0" && x.update_time) {
-            changeCell = `${x.change_str} <br><span style='font-size:0.9em;color:#888'>${x.update_time}</span>`;
+          let hasChange = x.change_str && x.change_str !== "0" && x.update_time;
+          if (hasChange) {
+            let num = parseFloat(x.change_str);
+            let str = (Math.round(num * 100) / 100).toFixed(2);
+            if (num > 0) str = "+" + str;
+            changeCell = str;
+            updateTimeCell = `<span style='color:#7c4dff;'>${updateDate}</span>`;
           } else {
             changeCell = "±0";
           }
@@ -402,8 +412,13 @@
             }
           }
           let updateTimeCell = updateTime ? updateDate : "";
-          if (x.change_str && x.change_str !== "0" && x.update_time) {
-            changeCell = `${x.change_str} <br><span style='font-size:0.9em;color:#888'>${x.update_time}</span>`;
+          let hasChange = x.change_str && x.change_str !== "0" && x.update_time;
+          if (hasChange) {
+            let num = parseFloat(x.change_str);
+            let str = (Math.round(num * 100) / 100).toFixed(2);
+            if (num > 0) str = "+" + str;
+            changeCell = str;
+            updateTimeCell = `<span style='color:#7c4dff;'>${updateDate}</span>`;
           } else {
             changeCell = "±0";
           }
