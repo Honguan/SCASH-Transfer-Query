@@ -1,10 +1,49 @@
-.table-area th.rank-col, .table-area td.rank-col {
-  min-width: 32px !important;
-  max-width: 40px !important;
-  width: 40px !important;
+.table-area th.rank-col, td.rank-col {
+  min-width: 48px !important;
+  max-width: 56px !important;
+  width: 56px !important;
   padding-left: 2px !important;
   padding-right: 2px !important;
 }
+.table-area th.address-col {
+  min-width: 180px !important;
+  max-width: 320px !important;
+  width: 220px !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+  text-align: center !important;
+}
+.table-area td.address-col {
+  min-width: 180px !important;
+  max-width: 320px !important;
+  width: 220px !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+  text-align: left !important;
+}
+.table-area th.balance-col, td.balance-col {
+  min-width: 80px !important;
+  max-width: 100px !important;
+  width: 100px !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+}
+.table-area th.change-col, td.change-col {
+  min-width: 80px !important;
+  max-width: 100px !important;
+  width: 100px !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+}
+.table-area th.update-time-col, td.update-time-col {
+  min-width: 140px !important;
+  max-width: 180px !important;
+  width: 160px !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+}
+
+
 /* 右上角刷新時間顯示區塊 */
 .refresh-time {
   color: #7c4dff;
@@ -23,6 +62,13 @@
   overflow-y: auto;
   overflow-x: hidden;
   width: 100%;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+.scrollable-tbody::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
 }
 .scrollable-tbody tr {
   display: table;
@@ -216,3 +262,25 @@ a:hover { text-decoration: underline; }
   letter-spacing: 1px;
   word-break: break-all;
 }
+
+/* 美化排行榜表格滾軸，細小且低調 */
+/* 讓排行榜表格滾軸顯示在表格外側 */
+.table-area .collapsible-content {
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.scrollable-tbody {
+  display: block;
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+.scrollable-tbody::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
