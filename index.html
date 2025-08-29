@@ -111,7 +111,7 @@
           </div>
         </div>
       </div>
-      <div class="section-title">大额转账记录（block & tx）</div>
+      <div class="section-title"><b>大额转账记录（金额 &gt; 500 SCASH，最近100笔）</b></div>
       <table class="tx-table" id="txTable">
         <thead>
           <tr>
@@ -415,31 +415,77 @@
       function renderTxTable() {
         const tbody = document.querySelector("#txTable tbody");
         tbody.innerHTML = "";
-        // 只显示最后20个区块的记录
-        // 先取得所有出现过的区块高度，取最新20个
+        // 取得所有出現過的區塊高度，取最大前100個
         const blockSet = new Set();
-        const last20Blocks = [];
-        for (
-          let i = txRecords.length - 1;
-          i >= 0 && last20Blocks.length < 20;
-          i--
-        ) {
+        const allBlocks = [];
+        for (let i = 0; i < txRecords.length; i++) {
           const blk = txRecords[i].block_height;
           if (!blockSet.has(blk)) {
             blockSet.add(blk);
-            last20Blocks.unshift(blk);
+            allBlocks.push(blk);
           }
         }
-        // 过滤出这20个区块的所有记录（由新到旧排序）
-        const showRecords = txRecords;
+        // 取最大前100個區塊高度
+        const top100Blocks = allBlocks
+          .sort((a, b) => b - a)
+          .slice(0, 100);
+        const top30Blocks = top100Blocks.slice(0, 30);
+        const fold70Blocks = top100Blocks.slice(30, 100);
+        // 只顯示這100個區塊的所有記錄（由新到舊排序）
+        const showRecords = txRecords.filter(x => top100Blocks.includes(x.block_height));
+        // 依區塊高度排序（大到小）
+        showRecords.sort((a, b) => b.block_height - a.block_height || b.txid.localeCompare(a.txid));
+        // 先渲染前30
         showRecords.forEach((x) => {
-          const tr = document.createElement("tr");
-          const blockLink = `<a href='https://scash.one/?search=${x.block_height}' target='_blank' rel='noopener'>${x.block_height}</a>`;
-          const txidLink = `<a href='https://scash.one/?search=${x.txid}' target='_blank' rel='noopener'>${x.txid}</a>`;
-          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener'>${x.address}</a>`;
-          tr.innerHTML = `<td>${blockLink}</td><td>${txidLink}</td><td>${addrLink}</td><td>${x.amount}</td><td>${x.transfer_time}</td>`;
-          tbody.appendChild(tr);
+          if (top30Blocks.includes(x.block_height)) {
+            const tr = document.createElement("tr");
+            const blockLink = `<a href='https://scash.one/?search=${x.block_height}' target='_blank' rel='noopener'>${x.block_height}</a>`;
+            let txidShort = x.txid;
+            if (txidShort.length > 20) {
+              txidShort = `${x.txid.slice(0, 10)}...${x.txid.slice(-10)}`;
+            }
+            const txidLink = `<a href='https://scash.one/?search=${x.txid}' target='_blank' rel='noopener'>${txidShort}</a>`;
+            const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='text-align:left;display:inline-block;width:100%;'>${x.address}</a>`;
+            const amount = (Math.round(x.amount * 100) / 100).toFixed(2);
+            tr.innerHTML = `<td>${blockLink}</td><td>${txidLink}</td><td style='text-align:left;'>${addrLink}</td><td style='text-align:left;'>${amount}</td><td>${x.transfer_time}</td>`;
+            tbody.appendChild(tr);
+          }
         });
+        // 摺疊區塊
+        if (fold70Blocks.length > 0) {
+          // 插入摺疊按鈕
+          const foldTr = document.createElement("tr");
+          foldTr.innerHTML = `<td colspan='5' style='text-align:center;cursor:pointer;color:#7c4dff;font-weight:bold;' id='txTableFoldBtn'>▼ 展開剩餘70個區塊記錄</td>`;
+          tbody.appendChild(foldTr);
+          // 產生摺疊內容
+          const foldRows = [];
+          showRecords.forEach((x) => {
+            if (fold70Blocks.includes(x.block_height)) {
+              const tr = document.createElement("tr");
+              tr.classList.add("txTableFoldRow");
+              tr.style.display = "none";
+              const blockLink = `<a href='https://scash.one/?search=${x.block_height}' target='_blank' rel='noopener'>${x.block_height}</a>`;
+              let txidShort = x.txid;
+              if (txidShort.length > 20) {
+                txidShort = `${x.txid.slice(0, 10)}...${x.txid.slice(-10)}`;
+              }
+              const txidLink = `<a href='https://scash.one/?search=${x.txid}' target='_blank' rel='noopener'>${txidShort}</a>`;
+              const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='text-align:left;display:inline-block;width:100%;'>${x.address}</a>`;
+              const amount = (Math.round(x.amount * 100) / 100).toFixed(2);
+              tr.innerHTML = `<td>${blockLink}</td><td>${txidLink}</td><td style='text-align:left;'>${addrLink}</td><td style='text-align:left;'>${amount}</td><td>${x.transfer_time}</td>`;
+              foldRows.push(tr);
+            }
+          });
+          // 展開/收合事件
+          foldTr.addEventListener('click', function() {
+            const isFolded = foldTr.textContent.includes('▼');
+            foldRows.forEach(tr => { tr.style.display = isFolded ? '' : 'none'; });
+            foldTr.textContent = isFolded ? '▲ 收合剩餘70個區塊記錄' : '▼ 展開剩餘70個區塊記錄';
+            foldTr.style.color = isFolded ? '#b39ddb' : '#7c4dff';
+          });
+          // 預設收合
+          foldRows.forEach(tr => tbody.appendChild(tr));
+        }
       }
 
   // ...初始化已移至 dashboard_data.js 載入完成後...
