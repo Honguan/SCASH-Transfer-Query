@@ -495,7 +495,7 @@ def main():
                 default_start = BLOCK_HEIGHT
             except Exception:
                 default_start = 1
-                start = input(f"請輸入起始區塊高度 (預設 {default_start}): ").strip()
+            start = input(f"請輸入起始區塊高度 (預設 {default_start}): ").strip()
             if not start:
                 start = default_start
             end = input("請輸入結束區塊高度 (留空則查到失敗為止): ").strip()
