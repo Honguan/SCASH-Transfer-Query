@@ -235,6 +235,39 @@ def write_address_balance_db(address, balance, conn=None):
         conn.close()
 
 
+# 自動查詢所有已知地址餘額並自動更新
+def auto_update_all_address_balances():
+    import sys
+    from datetime import datetime
+    print("\n自動查詢所有地址餘額...")
+    with sqlite3.connect(DB_FILE) as conn:
+        c = conn.cursor()
+        c.execute(
+            'SELECT address, balance, update_count FROM scash_address_balances')
+        rows = c.fetchall()
+        total = len(rows)
+        updated_count = 0
+        for idx, (address, old_balance, old_update_count) in enumerate(rows, 1):
+            new_balance = get_address_balance(address)
+            if new_balance is not None and abs(new_balance - old_balance) > 1e-8:
+                now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                diff = new_balance - old_balance
+                change_str = f"+{diff:.8f}" if diff > 0 else f"{diff:.8f}"
+                new_update_count = (old_update_count or 0) + 1
+                c.execute('''UPDATE scash_address_balances SET balance=?, update_time=?, update_count=?, change_str=? WHERE address=?''',
+                          (new_balance, now_str, new_update_count, change_str, address))
+                updated_count += 1
+            # 只顯示進度條
+            bar_len = 30
+            filled_len = int(bar_len * idx // total)
+            bar = '█' * filled_len + '-' * (bar_len - filled_len)
+            print(f"\r[{bar}] {idx}/{total} 已查詢...", end='')
+            sys.stdout.flush()
+        print()  # 換行
+        conn.commit()
+        print(f"\n共更新 {updated_count} 個地址餘額。\n")
+
+
 def record_address_balance(address, address_balance_set, conn=None):
     """查詢並記錄唯一地址餘額。"""
     if address_balance_set is not None and address not in address_balance_set:
@@ -282,9 +315,10 @@ def auto_query_mode(start_height, end_height=None):
                         shutil.move(src, dst)
                         print(f"dashboard_data.js 已移動到 {dst}")
             else:
-                print("查詢失敗或查不到，10分鐘後重試本區塊...")
-                for i in range(10 * 60, 0, -1):
-                    print(f"  等待 {i//60:02d}:{i%60:02d} 後重試...", end='\r')
+                print("查詢失敗或查不到，10秒後重試本區塊...")
+                auto_update_all_address_balances()
+                for i in range(10, 0, -1):
+                    print(f"  等待 {i:02d} 秒後重試...", end='\r')
                     time.sleep(1)
                 print("\n重新嘗試掃描本區塊...")
         except KeyboardInterrupt:
@@ -333,6 +367,8 @@ def process_and_record_block(block_height, address_balance_set):
                                  VALUES (?, ?, ?, ?, ?)''',
                               (txid, block_height, address, amount, time_str))
             conn.commit()
+        # 區塊查詢結束後自動查詢所有地址餘額
+        auto_update_all_address_balances()
         return True
     except Exception as e:
         print(f"查詢區塊 {block_height} 發生錯誤: {e}")
