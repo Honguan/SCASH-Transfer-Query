@@ -10,6 +10,8 @@ import subprocess
 import shutil
 import traceback
 import subprocess
+import ast
+import importlib
 from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, SHOW_RESULT, SCAN_INTERVAL, DB_FILE
 
 
@@ -488,9 +490,16 @@ def main():
         print("0. 離開")
         mode = input("請輸入模式編號 (1/2/3/4/0): ").strip()
         if mode == "1":
-            start = input("請輸入起始區塊高度 (預設 1): ").strip()
+            # 讀取 config.py 的 BLOCK_HEIGHT 作為預設值
+            try:
+                default_start = BLOCK_HEIGHT
+            except Exception:
+                default_start = 1
+                start = input(f"請輸入起始區塊高度 (預設 {default_start}): ").strip()
+            if not start:
+                start = default_start
             end = input("請輸入結束區塊高度 (留空則查到失敗為止): ").strip()
-            start_height = int(start) if start.isdigit() else 1
+            start_height = int(start) if str(start).isdigit() else 1
             end_height = int(end) if end.isdigit() else None
             auto_query_mode(start_height, end_height)
         elif mode == "2":
@@ -510,8 +519,7 @@ def main():
 
 
 def config_setting_mode():
-    import ast
-    import importlib
+
     config_path = os.path.join(os.path.dirname(__file__), 'config.py')
     # 參數說明
     param_desc = {
@@ -596,7 +604,6 @@ def find_total_output_amount_until_found(block_height, retry_minutes=10):
     """
     持續查找指定區塊的總輸出金額，找不到時每 retry_minutes 分鐘自動重試，直到找到或手動停止。
     """
-    import traceback
     while True:
         try:
             print(f"查詢區塊 {block_height} 的總輸出金額...")
