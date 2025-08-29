@@ -93,6 +93,7 @@ h1 {
   flex: 0 0 420px;
   min-width: 320px;
   max-width: 480px;
+  min-height: 450px;
   background: #f3eaff;
   border-radius: 12px;
   box-shadow: 0 2px 8px #d1b3ff;
