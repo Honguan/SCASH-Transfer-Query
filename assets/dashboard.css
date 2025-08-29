@@ -1,3 +1,12 @@
+/*
+====================================
+ SCASH Dashboard 主要樣式表
+ - 各區塊、表格、滾軸、版權、捐贈等區域皆有註解
+ - 請依需求擴充
+====================================
+*/
+
+/* ========== 排行榜表格欄寬設定 ========== */
 .table-area th.rank-col, td.rank-col {
   min-width: 48px !important;
   max-width: 56px !important;
@@ -5,6 +14,7 @@
   padding-left: 2px !important;
   padding-right: 2px !important;
 }
+/* ========== 排行榜表格地址欄寬 ========== */
 .table-area th.address-col {
   min-width: 180px !important;
   max-width: 320px !important;
@@ -21,6 +31,7 @@
   padding-right: 2px !important;
   text-align: left !important;
 }
+/* ========== 排行榜表格餘額、變動、時間欄寬 ========== */
 .table-area th.balance-col, td.balance-col {
   min-width: 80px !important;
   max-width: 100px !important;
@@ -44,7 +55,7 @@
 }
 
 
-/* 右上角刷新時間顯示區塊 */
+/* ========== 右上角刷新時間顯示區塊 ========== */
 .refresh-time {
   color: #7c4dff;
   font-size: 1.08em;
@@ -55,7 +66,8 @@
   -webkit-user-select: text;
   user-select: text;
 }
-/* 排行榜表格滾軸，最多顯示5列 */
+
+/* ========== 排行榜表格滾軸美化 ========== */
 .scrollable-tbody {
   display: block;
   max-height: 220px;
@@ -65,16 +77,19 @@
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
 }
+/* ========== 排行榜表格滾軸隱藏 ========== */
 .scrollable-tbody::-webkit-scrollbar {
   width: 0;
   height: 0;
   background: transparent;
 }
+/* ========== 排行榜表格滾軸行設定 ========== */
 .scrollable-tbody tr {
   display: table;
   width: 100%;
   table-layout: fixed;
 }
+/* ========== 排行榜表格欄位設定 ========== */
 .scrollable-tbody td, .scrollable-tbody th {
   box-sizing: border-box;
   white-space: nowrap;
@@ -85,12 +100,14 @@
 .scrollable-tbody td, .scrollable-tbody th {
   box-sizing: border-box;
 }
+/* ========== 排行榜表格表頭/表尾設定 ========== */
 .table-area table thead, .table-area table tfoot {
   display: table;
   width: 100%;
   table-layout: fixed;
 }
-/* 底部紅色版權區塊 */
+
+/* ========== 底部紫色版權區塊 ========== */
 .footer-copyright {
   width: 100vw;
   background: #9221be;
@@ -109,6 +126,8 @@
   text-decoration: underline;
   margin-left: 8px;
 }
+
+/* ========== 全域字型與背景 ========== */
 body {
   font-family: "Segoe UI", Arial, sans-serif;
   background: #f6f3ff;
@@ -116,6 +135,8 @@ body {
   padding: 0;
   color: #4b2e6d;
 }
+
+/* ========== 主要容器區塊 ========== */
 .container {
   max-width: 1200px;
   margin: 30px auto;
@@ -124,17 +145,23 @@ body {
   box-shadow: 0 2px 16px #cbb6f7;
   padding: 32px;
 }
+
+/* ========== 標題樣式 ========== */
 h1 {
   text-align: center;
   margin-bottom: 24px;
   color: #7c4dff;
 }
+
+/* ========== Flex 佈局 ========== */
 .flex {
   display: flex;
   gap: 32px;
   flex-wrap: wrap;
   align-items: flex-start;
 }
+
+/* ========== 圓餅圖區塊 ========== */
 .chart-area {
   flex: 0 0 420px;
   min-width: 320px;
@@ -145,6 +172,8 @@ h1 {
   box-shadow: 0 2px 8px #d1b3ff;
   padding: 16px;
 }
+
+/* ========== 排行榜表格區塊 ========== */
 .table-area {
   flex: 1 1 500px;
   min-width: 500px;
@@ -154,6 +183,8 @@ h1 {
   box-shadow: 0 2px 8px #d1b3ff;
   padding: 16px;
 }
+
+/* ========== 排行榜表格主體 ========== */
 .table-area table {
   table-layout: fixed;
   word-break: break-all;
@@ -162,6 +193,8 @@ h1 {
   border: 1.5px solid #cbb6f7;
   border-collapse: collapse;
 }
+
+/* ========== 排行榜表格欄位 ========== */
 .table-area th,
 .table-area td, .table-area th {
   padding-left: 12px;
@@ -171,6 +204,8 @@ h1 {
   border: 1.5px solid #cbb6f7;
   box-sizing: border-box;
 }
+
+/* ========== 排行榜表格地址欄特殊設定 ========== */
 .table-area td:nth-child(2),
 .table-area th:nth-child(2) {
   word-break: break-all !important;
@@ -191,6 +226,8 @@ h1 {
   overflow: visible !important;
   text-overflow: initial !important;
 }
+
+/* ========== 全域表格樣式 ========== */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -198,26 +235,36 @@ table {
   background: #f3eaff;
   color: #4b2e6d;
 }
+
+/* ========== 全域表格欄位樣式 ========== */
 th,
 td {
   border: 1px solid #cbb6f7;
   padding: 8px 0;
   text-align: center;
 }
+
+/* ========== 全域表格表頭樣式 ========== */
 th {
   background: #e3d0ff;
   color: #7c4dff;
 }
+
+/* ========== 區塊標題樣式 ========== */
 .section-title {
   margin-top: 40px;
   font-size: 1.3em;
   color: #7c4dff;
 }
+
+/* ========== 大額轉帳表格樣式 ========== */
 .tx-table {
   margin-top: 8px;
   background: #f3eaff;
   color: #4b2e6d;
 }
+
+/* ========== 大額轉帳表格欄位樣式 ========== */
 .tx-table td,
 .tx-table th {
   max-width: 320px;
@@ -227,8 +274,12 @@ th {
   background: #f3eaff;
   color: #4b2e6d;
 }
+
+/* ========== 超連結樣式 ========== */
 a { color: #7c4dff; text-decoration: none; }
 a:hover { text-decoration: underline; }
+
+/* ========== 排行榜摺疊區塊樣式 ========== */
 .collapsible { color: #4b2e6d; background: #e3d0ff; border-radius: 6px; padding: 4px 12px; margin-bottom: 4px; display: inline-block; }
 .collapsible b { color: #7c4dff; }
 .collapsible.collapsed b { color: #b7b9c9; }
@@ -240,7 +291,8 @@ a:hover { text-decoration: underline; }
 .collapsible.collapsed + .collapsible-content {
   display: none !important;
 }
-/* 捐贈區塊 */
+
+/* ========== 捐贈區塊樣式 ========== */
 .footer-donate {
   background: #e3d0ff;
   color: #4b2e6d;
@@ -263,24 +315,9 @@ a:hover { text-decoration: underline; }
   word-break: break-all;
 }
 
-/* 美化排行榜表格滾軸，細小且低調 */
-/* 讓排行榜表格滾軸顯示在表格外側 */
+/* ========== 排行榜表格滾軸外觀 ========== */
 .table-area .collapsible-content {
   overflow-x: auto;
   padding-bottom: 2px;
-}
-.scrollable-tbody {
-  display: block;
-  max-height: 220px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  width: 100%;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
-}
-.scrollable-tbody::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  background: transparent;
 }
 

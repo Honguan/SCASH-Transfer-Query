@@ -7,24 +7,6 @@
     <link rel="icon" type="image/png" href="assets\satoshicash.webp" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-    <script>
-      
-      // 動態插入 dashboard_data.js，並加上隨機參數防快取
-      const script = document.createElement('script');
-      script.src = 'assets/dashboard_data.js?v=' + Math.random().toString(36).substring(2, 10);
-      script.onload = function() {
-        // dashboard_data.js 載入完成後再初始化
-        console.log('addressBalances', addressBalances);
-        renderPieChart();
-        renderRankTables();
-        renderTxTable();
-        updateTop100Total();
-      };
-      document.head.appendChild(script);
-      
-    </script>
-      <!-- document.head.appendChild(script); -->
-    </script>
     <link rel="stylesheet" href="assets/dashboard.css" />
   </head>
   <body>
@@ -45,7 +27,10 @@
           SCASH 地址余额看板
         </h1>
         <div id="refreshTime" class="refresh-time"></div>
-        <span id="refreshCountdownText" style="margin-left:12px;font-size:1em;color:#7c4dff;"></span>
+        <span
+          id="refreshCountdownText"
+          style="margin-left: 12px; font-size: 1em; color: #7c4dff"
+        ></span>
       </div>
       <div class="flex">
         <div class="chart-area">
@@ -53,11 +38,24 @@
             id="pieChart"
             width="420"
             height="420"
-            style="width:420px;height:420px;display:block;margin:0 auto;max-width:none;max-height:none;"
+            style="
+              width: 420px;
+              height: 420px;
+              display: block;
+              margin: 0 auto;
+              max-width: none;
+              max-height: none;
+            "
           ></canvas>
         </div>
         <div class="table-area">
-          <h2>地址余额排行榜 <span id="top100Total" style="font-size:1rem;color:#7c4dff;"></span></h2>
+          <h2>
+            地址余额排行榜
+            <span
+              id="top100Total"
+              style="font-size: 1rem; color: #7c4dff"
+            ></span>
+          </h2>
           <div class="mb-16 collapsible" data-target="rankTable10">
             <b>前10名 ▼</b>
           </div>
@@ -78,32 +76,32 @@
           <div class="mt-16 collapsible" data-target="rankTable50">
             <b>第11~50名 ▼</b>
           </div>
-            <div class="collapsible-content" id="wrap-rankTable50">
+          <div class="collapsible-content" id="wrap-rankTable50">
             <table id="rankTable50">
               <thead>
-              <tr>
-                <th class="rank-col">排名</th>
-                <th class="address-col">地址</th>
-                <th class="balance-col">余额</th>
-                <th class="change-col">变动数量</th>
-                <th class="update-time-col">更新时间</th>
-              </tr>
+                <tr>
+                  <th class="rank-col">排名</th>
+                  <th class="address-col">地址</th>
+                  <th class="balance-col">余额</th>
+                  <th class="change-col">变动数量</th>
+                  <th class="update-time-col">更新时间</th>
+                </tr>
               </thead>
               <tbody class="scrollable-tbody"></tbody>
             </table>
-            </div>
-            <div class="mt-16 collapsible" data-target="rankTable100">
+          </div>
+          <div class="mt-16 collapsible" data-target="rankTable100">
             <b>第51~100名 ▼</b>
-            </div>
-            <div class="collapsible-content" id="wrap-rankTable100">
+          </div>
+          <div class="collapsible-content" id="wrap-rankTable100">
             <table id="rankTable100">
               <thead>
-              <tr>
-                <th class="rank-col">排名</th>
-                <th class="address-col">地址</th>
-                <th class="balance-col">余额</th>
-                <th class="change-col">变动数量</th>
-                <th class="update-time-col">更新时间</th>
+                <tr>
+                  <th class="rank-col">排名</th>
+                  <th class="address-col">地址</th>
+                  <th class="balance-col">余额</th>
+                  <th class="change-col">变动数量</th>
+                  <th class="update-time-col">更新时间</th>
                 </tr>
               </thead>
               <tbody class="scrollable-tbody"></tbody>
@@ -111,7 +109,9 @@
           </div>
         </div>
       </div>
-      <div class="section-title"><b>大额转账记录（金额 &gt; 500 SCASH，最近100笔）</b></div>
+      <div class="section-title">
+        <b>大额转账记录（金额 &gt; 500 SCASH，最近100笔）</b>
+      </div>
       <table class="tx-table" id="txTable">
         <thead>
           <tr>
@@ -126,24 +126,34 @@
       </table>
     </div>
     <script>
-      // 自動刷新與右上角顯示刷新時間
+      // ========== 資料載入與初始化 ========== //
+      // 動態插入 dashboard_data.js，並加上隨機參數防快取
+      const script = document.createElement("script");
+      script.src =
+        "assets/dashboard_data.js?v=" +
+        Math.random().toString(36).substring(2, 10);
+      script.onload = function () {
+        // dashboard_data.js 載入完成後再初始化
+        console.log("addressBalances", addressBalances);
+        renderPieChart();
+        renderRankTables();
+        renderTxTable();
+        updateTop100Total();
+      };
+      document.head.appendChild(script);
+
+      // ========== 自動刷新與倒數顯示 ========== //
+      let countdown = 600; // 10分鐘
       function updateRefreshTime() {
         const now = new Date();
         const pad = (n) => n.toString().padStart(2, "0");
-        const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(
-          now.getDate()
-        )} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(
-          now.getSeconds()
-        )}`;
-        // document.getElementById(
-        //   "refreshTime"
-        // ).textContent = `刷新时间：${timeStr}`;
         // 顯示倒數（分鐘:秒）
         const min = Math.floor(countdown / 60);
         const sec = countdown % 60;
-        document.getElementById("refreshCountdownText").innerHTML = `<b>（距下次自動刷新：${pad(min)}:${pad(sec)}）</b>`;
+        document.getElementById(
+          "refreshCountdownText"
+        ).innerHTML = `<b>（距下次自動刷新：${pad(min)}:${pad(sec)}）</b>`;
       }
-      let countdown = 600; // 10分鐘
       function resetCountdown() {
         countdown = 600;
       }
@@ -155,20 +165,18 @@
         }
         updateRefreshTime();
       }, 1000);
-      // 頁面載入時立即顯示一次
-      updateRefreshTime();
-      // 點擊刷新時間手動刷新並重置倒數
+      updateRefreshTime(); // 頁面載入時立即顯示一次
       document.getElementById("refreshTime").onclick = function () {
         resetCountdown();
         location.reload();
       };
-      // 手動刷新（F5）時自動重置倒數（瀏覽器自動重載會重設變數）
       window.addEventListener("keydown", function (e) {
         if (e.key === "F5") resetCountdown();
       });
-      // 修正折叠排行榜表格功能
+
+      // ========== 折疊排行榜表格功能 ========== //
       document.addEventListener("DOMContentLoaded", function () {
-        // 默认只展开前10名
+        // 預設只展開前10名
         document.querySelectorAll(".collapsible").forEach(function (btn, idx) {
           const target = btn.getAttribute("data-target");
           const wrap = document.getElementById("wrap-" + target);
@@ -203,7 +211,7 @@
         });
       });
 
-      // 圓餅圖
+      // ========== 圓餅圖渲染 ========== //
       function renderPieChart() {
         const ctx = document.getElementById("pieChart").getContext("2d");
         const top10 = addressBalances.slice(0, 10);
@@ -211,7 +219,7 @@
         const group51_100 = addressBalances.slice(50, 100);
         const sum11_50 = group11_50.reduce((a, b) => a + b.balance, 0);
         const sum51_100 = group51_100.reduce((a, b) => a + b.balance, 0);
-        // 用於標籤顯示
+        // 標籤顯示
         const labels = [
           ...top10.map(
             (x, i) =>
@@ -236,24 +244,18 @@
           "#ff9da7",
           "#9c755f",
           "#bab0ab",
-          "#b39ddb", // 11-50
-          "#ce93d8", // 51-100
+          "#b39ddb",
+          "#ce93d8",
         ];
-        // 先移除舊的canvas事件
-        ctx.canvas.onclick = null;
+        ctx.canvas.onclick = null; // 先移除舊事件
         const chart = new Chart(ctx, {
           type: "pie",
           data: {
             labels: labels,
-            datasets: [
-              {
-                data: data,
-                backgroundColor: colors,
-              },
-            ],
+            datasets: [{ data: data, backgroundColor: colors }],
           },
           options: {
-            responsive: false, // 固定大小，不自動縮放
+            responsive: false,
             maintainAspectRatio: false,
             plugins: {
               legend: { position: "bottom" },
@@ -273,7 +275,6 @@
               tooltip: {
                 callbacks: {
                   label: function (context) {
-                    // 顯示完整地址
                     if (context.dataIndex < 10) {
                       const addr = addressBalances[context.dataIndex].address;
                       return `${context.label}: ${addr} (${context.parsed})`;
@@ -297,14 +298,14 @@
         });
       }
 
-      // 排行榜三区表格
+      // ========== 排行榜表格渲染 ========== //
       function renderRankTables() {
         // 前10
         const tbody10 = document.querySelector("#rankTable10 tbody");
         tbody10.innerHTML = "";
         addressBalances.slice(0, 10).forEach((x, i) => {
           const tr = document.createElement("tr");
-          // 地址顯示前6...後4
+          // 地址顯示前12...後10
           const shortAddr =
             x.address.length > 12
               ? `${x.address.slice(0, 12)}...${x.address.slice(-10)}`
@@ -332,24 +333,25 @@
           }
           tr.innerHTML = `<td class='rank-col'>${
             i + 1
-            }</td><td class="address-col">${addrLink}</td><td class="balance-col">${(Math.round(x.balance * 100) / 100).toFixed(2)}</td><td class="change-col">${changeCell}</td><td class="update-time-col">${updateTimeCell}</td>`;
+          }</td><td class="address-col">${addrLink}</td><td class="balance-col">${(
+            Math.round(x.balance * 100) / 100
+          ).toFixed(
+            2
+          )}</td><td class="change-col">${changeCell}</td><td class="update-time-col">${updateTimeCell}</td>`;
           tbody10.appendChild(tr);
         });
-
         // 第11~50名
         const tbody50 = document.querySelector("#rankTable50 tbody");
         tbody50.innerHTML = "";
         addressBalances.slice(10, 50).forEach((x, i) => {
           const tr = document.createElement("tr");
-          // 地址顯示前6...後4
           const shortAddr =
             x.address.length > 12
-                ? `${x.address.slice(0, 12)}...${x.address.slice(-10)}`
+              ? `${x.address.slice(0, 12)}...${x.address.slice(-10)}`
               : x.address;
           const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' title='${x.address}' style='word-break:break-all;max-width:700px;display:inline-block;'>${shortAddr}</a>`;
           let changeCell = "";
           let updateTime = x.update_time || x.scan_time || "";
-          // 轉換格式 yyyy-MM-dd HH:mm:ss -> yyyy/MM/dd HH:mm
           let updateDate = "";
           if (updateTime) {
             const dt = updateTime.split(" ");
@@ -369,11 +371,13 @@
           }
           tr.innerHTML = `<td class='rank-col'>${
             i + 11
-          }</td><td class="address-col">${addrLink}</td><td class="balance-col">${(Math.round(x.balance * 100) / 100).toFixed(2)}</td><td class="change-col">${changeCell}</td><td class="update-time-col">${updateTimeCell}</td>`;
+          }</td><td class="address-col">${addrLink}</td><td class="balance-col">${(
+            Math.round(x.balance * 100) / 100
+          ).toFixed(
+            2
+          )}</td><td class="change-col">${changeCell}</td><td class="update-time-col">${updateTimeCell}</td>`;
           tbody50.appendChild(tr);
         });
-
-
         // 第51~100名
         const tbody100 = document.querySelector("#rankTable100 tbody");
         tbody100.innerHTML = "";
@@ -381,12 +385,11 @@
           const tr = document.createElement("tr");
           const shortAddr =
             x.address.length > 12
-                ? `${x.address.slice(0, 12)}...${x.address.slice(-10)}`
+              ? `${x.address.slice(0, 12)}...${x.address.slice(-10)}`
               : x.address;
           const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' title='${x.address}' style='word-break:break-all;max-width:700px;display:inline-block;'>${shortAddr}</a>`;
           let changeCell = "";
           let updateTime = x.update_time || x.scan_time || "";
-          // 轉換格式 yyyy-MM-dd HH:mm:ss -> yyyy/MM/dd HH:mm
           let updateDate = "";
           if (updateTime) {
             const dt = updateTime.split(" ");
@@ -406,39 +409,53 @@
           }
           tr.innerHTML = `<td class='rank-col'>${
             i + 51
-          }</td><td class="address-col">${addrLink}</td><td class="balance-col">${(Math.round(x.balance * 100) / 100).toFixed(2)}</td><td class="change-col">${changeCell}</td><td class="update-time-col">${updateTimeCell}</td>`;
+          }</td><td class="address-col">${addrLink}</td><td class="balance-col">${(
+            Math.round(x.balance * 100) / 100
+          ).toFixed(
+            2
+          )}</td><td class="change-col">${changeCell}</td><td class="update-time-col">${updateTimeCell}</td>`;
           tbody100.appendChild(tr);
         });
       }
 
-      // 大额转账记录表格
+      // ========== 大額轉帳記錄表格渲染 ========== //
       function renderTxTable() {
         const tbody = document.querySelector("#txTable tbody");
         tbody.innerHTML = "";
-        // 取得所有出現過的區塊高度，取最大前100個
-        const blockSet = new Set();
-        const allBlocks = [];
-        for (let i = 0; i < txRecords.length; i++) {
-          const blk = txRecords[i].block_height;
-          if (!blockSet.has(blk)) {
-            blockSet.add(blk);
-            allBlocks.push(blk);
+        // 取區塊高度最大的最後100筆（新到舊）
+        const sorted = [...txRecords].sort(
+          (a, b) =>
+            b.block_height - a.block_height || b.txid.localeCompare(a.txid)
+        );
+        const last100 = sorted.slice(0, 100);
+        // 前20筆直接顯示
+        last100.slice(0, 20).forEach((x) => {
+          const tr = document.createElement("tr");
+          const blockLink = `<a href='https://scash.one/?search=${x.block_height}' target='_blank' rel='noopener'>${x.block_height}</a>`;
+          let txidShort = x.txid;
+          if (txidShort.length > 20) {
+            txidShort = `${x.txid.slice(0, 10)}...${x.txid.slice(-10)}`;
           }
-        }
-        // 取最大前100個區塊高度
-        const top100Blocks = allBlocks
-          .sort((a, b) => b - a)
-          .slice(0, 100);
-        const top30Blocks = top100Blocks.slice(0, 30);
-        const fold70Blocks = top100Blocks.slice(30, 100);
-        // 只顯示這100個區塊的所有記錄（由新到舊排序）
-        const showRecords = txRecords.filter(x => top100Blocks.includes(x.block_height));
-        // 依區塊高度排序（大到小）
-        showRecords.sort((a, b) => b.block_height - a.block_height || b.txid.localeCompare(a.txid));
-        // 先渲染前30
-        showRecords.forEach((x) => {
-          if (top30Blocks.includes(x.block_height)) {
+          const txidLink = `<a href='https://scash.one/?search=${x.txid}' target='_blank' rel='noopener'>${txidShort}</a>`;
+          const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='text-align:left;display:inline-block;width:100%;'>${x.address}</a>`;
+          const amount = (Math.round(x.amount * 100) / 100).toFixed(2);
+          tr.innerHTML = `<td>${blockLink}</td><td>${txidLink}</td><td style='text-align:left;'>${addrLink}</td><td style='text-align:left;'>${amount}</td><td>${x.transfer_time}</td>`;
+          tbody.appendChild(tr);
+        });
+        // 後80筆摺疊
+        if (last100.length > 20) {
+          // 插入摺疊按鈕
+          const foldTr = document.createElement("tr");
+          foldTr.id = "txTableFoldBtnTr";
+          foldTr.innerHTML = `<td colspan='5' style='text-align:center;padding:8px 0;'>
+            <button id='txTableFoldBtn' style='padding:4px 18px;font-size:1em;cursor:pointer;background:#ede7f6;color:#5e35b1;border:1px solid #d1c4e9;border-radius:4px;'>展開後80筆 ▼</button>
+          </td>`;
+          tbody.appendChild(foldTr);
+          // 後80筆預設隱藏
+          last100.slice(20).forEach((x, i) => {
             const tr = document.createElement("tr");
+            tr.classList.add("txTableFoldedRow");
+            tr.style.display = "none";
             const blockLink = `<a href='https://scash.one/?search=${x.block_height}' target='_blank' rel='noopener'>${x.block_height}</a>`;
             let txidShort = x.txid;
             if (txidShort.length > 20) {
@@ -449,48 +466,45 @@
             const amount = (Math.round(x.amount * 100) / 100).toFixed(2);
             tr.innerHTML = `<td>${blockLink}</td><td>${txidLink}</td><td style='text-align:left;'>${addrLink}</td><td style='text-align:left;'>${amount}</td><td>${x.transfer_time}</td>`;
             tbody.appendChild(tr);
-          }
-        });
-        // 摺疊區塊
-        if (fold70Blocks.length > 0) {
-          // 插入摺疊按鈕
-          const foldTr = document.createElement("tr");
-          foldTr.innerHTML = `<td colspan='5' style='text-align:center;cursor:pointer;color:#7c4dff;font-weight:bold;' id='txTableFoldBtn'>▼ 展開剩餘70個區塊記錄</td>`;
-          tbody.appendChild(foldTr);
-          // 產生摺疊內容
-          const foldRows = [];
-          showRecords.forEach((x) => {
-            if (fold70Blocks.includes(x.block_height)) {
-              const tr = document.createElement("tr");
-              tr.classList.add("txTableFoldRow");
-              tr.style.display = "none";
-              const blockLink = `<a href='https://scash.one/?search=${x.block_height}' target='_blank' rel='noopener'>${x.block_height}</a>`;
-              let txidShort = x.txid;
-              if (txidShort.length > 20) {
-                txidShort = `${x.txid.slice(0, 10)}...${x.txid.slice(-10)}`;
-              }
-              const txidLink = `<a href='https://scash.one/?search=${x.txid}' target='_blank' rel='noopener'>${txidShort}</a>`;
-              const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='text-align:left;display:inline-block;width:100%;'>${x.address}</a>`;
-              const amount = (Math.round(x.amount * 100) / 100).toFixed(2);
-              tr.innerHTML = `<td>${blockLink}</td><td>${txidLink}</td><td style='text-align:left;'>${addrLink}</td><td style='text-align:left;'>${amount}</td><td>${x.transfer_time}</td>`;
-              foldRows.push(tr);
-            }
           });
-          // 展開/收合事件
-          foldTr.addEventListener('click', function() {
-            const isFolded = foldTr.textContent.includes('▼');
-            foldRows.forEach(tr => { tr.style.display = isFolded ? '' : 'none'; });
-            foldTr.textContent = isFolded ? '▲ 收合剩餘70個區塊記錄' : '▼ 展開剩餘70個區塊記錄';
-            foldTr.style.color = isFolded ? '#b39ddb' : '#7c4dff';
-          });
-          // 預設收合
-          foldRows.forEach(tr => tbody.appendChild(tr));
+          // 綁定展開/收合事件
+          setTimeout(() => {
+            const btn = document.getElementById("txTableFoldBtn");
+            let folded = true;
+            btn.onclick = function () {
+              folded = !folded;
+              document.querySelectorAll(".txTableFoldedRow").forEach((tr) => {
+                tr.style.display = folded ? "none" : "";
+              });
+              btn.textContent = folded ? "展開後80筆 ▼" : "收合後80筆 ▲";
+            };
+          }, 0);
         }
       }
 
-  // ...初始化已移至 dashboard_data.js 載入完成後...
+      // ========== 前100名總持有幣數顯示 ========== //
+      function updateTop100Total() {
+        // 前100合計
+        const total = addressBalances
+          .slice(0, 100)
+          .reduce((a, b) => a + (b.balance || 0), 0);
+        // 以最後一筆最大區塊高度*50 為總量
+        let maxBlock = 0;
+        if (txRecords && txRecords.length > 0) {
+          maxBlock = Math.max(...txRecords.map((x) => x.block_height));
+        }
+        const totalSupply = maxBlock * 50;
+        // 占比
+        const percent = totalSupply > 0 ? (total / totalSupply) * 100 : 0;
+        const totalWan = Math.round((total / 10000) * 100) / 100; // 四捨五入到小數點後2位
+        const supplyWan = Math.round((totalSupply / 10000) * 100) / 100;
+        const percentStr = percent > 0 ? percent.toFixed(2) : "0.00";
+        document.getElementById(
+          "top100Total"
+        ).textContent = `（前100合計：${totalWan} 萬｜總量：${supplyWan} 萬｜占比：${percentStr}%）`;
+      }
 
-      // 折叠/展开更新时间
+      // ========== 折疊/展開「更新時間」欄位 ========== //
       document.addEventListener("click", function (e) {
         if (e.target.classList.contains("fold-time")) {
           const fold = e.target;
@@ -511,45 +525,57 @@
           }
         }
       });
-
-      // 顯示前100名總持有幣數
-      function updateTop100Total() {
-        const total = addressBalances.slice(0, 100).reduce((a, b) => a + (b.balance || 0), 0);
-        const totalWan = Math.round(total / 10000 * 100) / 100; // 四捨五入到小數點後2位
-        document.getElementById("top100Total").textContent = `（前100合计：${totalWan} 萬）`;
-      }
     </script>
     <!-- 底部紫色版权区块 -->
     <div class="footer-copyright">
-      SatoshiCash社区 中本聪现金中文电报社区赞助开发 Copyright 2025-2125 ｜ 
+      SatoshiCash社区 中本聪现金中文电报社区赞助开发 Copyright 2025-2125 ｜
       <a
-      href="https://github.com/Honguan/SCASH-Transfer-Query"
-      target="_blank"
-      rel="noopener"
-      >GitHub 项目链接</a
+        href="https://github.com/Honguan/SCASH-Transfer-Query"
+        target="_blank"
+        rel="noopener"
+        >GitHub 项目链接</a
       >
-      <span style="margin-left:16px;">
-      捐赠地址：
-      <span id="donateAddr" style="user-select:all;cursor:pointer;">
-      scash1...9dlzn
-      </span>
-      <button id="copyDonateBtn" style="margin-left:4px;padding:1px 7px;font-size:0.88em;cursor:pointer;background:#f8bbf5;color:#5e35b1;border:1px solid #d1c4e9;border-radius:4px;transition:background 0.2s;">
-      复制
-      </button>
-      <span id="copySuccess" style="color:rgb(237, 208, 249);display:none;margin-left:6px;">复制成功</span>
+      <span style="margin-left: 16px">
+        捐赠地址：
+        <span id="donateAddr" style="user-select: all; cursor: pointer">
+          scash1...9dlzn
+        </span>
+        <button
+          id="copyDonateBtn"
+          style="
+            margin-left: 4px;
+            padding: 1px 7px;
+            font-size: 0.88em;
+            cursor: pointer;
+            background: #f8bbf5;
+            color: #5e35b1;
+            border: 1px solid #d1c4e9;
+            border-radius: 4px;
+            transition: background 0.2s;
+          "
+        >
+          复制
+        </button>
+        <span
+          id="copySuccess"
+          style="color: rgb(237, 208, 249); display: none; margin-left: 6px"
+          >复制成功</span
+        >
       </span>
       <script>
-      document.getElementById('copyDonateBtn').onclick = function() {
-      const addr = 'scash1qxz7d3gf9yhequz4v9h0tqkcrrlv5a4nps9dlzn';
-      navigator.clipboard.writeText(addr).then(function() {
-      const tip = document.getElementById('copySuccess');
-      tip.style.display = '';
-      setTimeout(() => { tip.style.display = 'none'; }, 1200);
-      });
-      };
-      document.getElementById('donateAddr').onclick = function() {
-      document.getElementById('copyDonateBtn').click();
-      };
+        document.getElementById("copyDonateBtn").onclick = function () {
+          const addr = "scash1qxz7d3gf9yhequz4v9h0tqkcrrlv5a4nps9dlzn";
+          navigator.clipboard.writeText(addr).then(function () {
+            const tip = document.getElementById("copySuccess");
+            tip.style.display = "";
+            setTimeout(() => {
+              tip.style.display = "none";
+            }, 1200);
+          });
+        };
+        document.getElementById("donateAddr").onclick = function () {
+          document.getElementById("copyDonateBtn").click();
+        };
       </script>
     </div>
   </body>
