@@ -305,8 +305,19 @@ def auto_query_mode(start_height, end_height=None):
                     import subprocess
                     import shutil
                     import os
-                    subprocess.run(
-                        [sys.executable, 'export_dashboard_data.py'], check=True)
+                    # 失敗時重試 export_dashboard_data.py，直到成功或手動中斷
+                    while True:
+                        try:
+                            subprocess.run(
+                                [sys.executable, 'export_dashboard_data.py'], check=True)
+                            break
+                        except Exception as e:
+                            print(f"執行 export_dashboard_data.py 發生錯誤: {e}，3秒後重試... (Ctrl+C 可中止)")
+                            try:
+                                time.sleep(3)
+                            except KeyboardInterrupt:
+                                print("已中止 export_dashboard_data.py 重試。")
+                                break
                     src = os.path.join(os.path.dirname(
                         __file__), 'dashboard_data.js')
                     dst_dir = os.path.join(os.path.dirname(__file__), 'assets')
@@ -317,10 +328,18 @@ def auto_query_mode(start_height, end_height=None):
             else:
                 print("查詢失敗或查不到，10秒後重試本區塊...")
                 auto_update_all_address_balances()
-                try:
-                    subprocess.run([sys.executable, 'export_dashboard_data.py'], check=True)
-                except Exception as e:
-                    print(f"執行 export_dashboard_data.py 發生錯誤: {e}")
+                # 失敗時重試 export_dashboard_data.py，直到成功或手動中斷
+                while True:
+                    try:
+                        subprocess.run([sys.executable, 'export_dashboard_data.py'], check=True)
+                        break
+                    except Exception as e:
+                        print(f"執行 export_dashboard_data.py 發生錯誤: {e}，3秒後重試... (Ctrl+C 可中止)")
+                        try:
+                            time.sleep(3)
+                        except KeyboardInterrupt:
+                            print("已中止 export_dashboard_data.py 重試。")
+                            break
                 for i in range(10, 0, -1):
                     print(f"  等待 {i:02d} 秒後重試...", end='\r')
                     time.sleep(1)
