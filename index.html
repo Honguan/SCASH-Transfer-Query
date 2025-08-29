@@ -344,7 +344,7 @@
           // 地址顯示前6...後4
           const shortAddr =
             x.address.length > 12
-              ? `${x.address.slice(0, 6)}...${x.address.slice(-4)}`
+                ? `${x.address.slice(0, 12)}...${x.address.slice(-10)}`
               : x.address;
           const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' title='${x.address}' style='word-break:break-all;max-width:700px;display:inline-block;'>${shortAddr}</a>`;
           let changeCell = "";
@@ -381,7 +381,7 @@
           const tr = document.createElement("tr");
           const shortAddr =
             x.address.length > 12
-              ? `${x.address.slice(0, 6)}...${x.address.slice(-4)}`
+                ? `${x.address.slice(0, 12)}...${x.address.slice(-10)}`
               : x.address;
           const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' title='${x.address}' style='word-break:break-all;max-width:700px;display:inline-block;'>${shortAddr}</a>`;
           let changeCell = "";
