@@ -15,11 +15,10 @@
       script.onload = function() {
         // dashboard_data.js 載入完成後再初始化
         console.log('addressBalances', addressBalances);
-        
         renderPieChart();
         renderRankTables();
         renderTxTable();
-        
+        updateTop100Total();
       };
       document.head.appendChild(script);
       
@@ -46,6 +45,7 @@
           SCASH 地址余额看板
         </h1>
         <div id="refreshTime" class="refresh-time"></div>
+        <span id="refreshCountdownText" style="margin-left:12px;font-size:1em;color:#7c4dff;"></span>
       </div>
       <div class="flex">
         <div class="chart-area">
@@ -57,7 +57,7 @@
           ></canvas>
         </div>
         <div class="table-area">
-          <h2>地址余额排行榜</h2>
+          <h2>地址余额排行榜 <span id="top100Total" style="font-size:1rem;color:#7c4dff;"></span></h2>
           <div class="mb-16 collapsible" data-target="rankTable10">
             <b>前10名 ▼</b>
           </div>
@@ -135,23 +135,28 @@
         )} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(
           now.getSeconds()
         )}`;
-        document.getElementById(
-          "refreshTime"
-        ).textContent = `刷新时间：${timeStr}`;
+        // document.getElementById(
+        //   "refreshTime"
+        // ).textContent = `刷新时间：${timeStr}`;
+        // 顯示倒數（分鐘:秒）
+        const min = Math.floor(countdown / 60);
+        const sec = countdown % 60;
+        document.getElementById("refreshCountdownText").innerHTML = `<b>（距下次自動刷新：${pad(min)}:${pad(sec)}）</b>`;
       }
-      let countdown = 60;
+      let countdown = 600; // 10分鐘
       function resetCountdown() {
-        countdown = 60;
+        countdown = 600;
       }
-      updateRefreshTime();
       setInterval(() => {
         countdown--;
         if (countdown <= 0) {
-          location.reload();
-        } else {
-          updateRefreshTime();
+          fetchDataAndRender();
+          resetCountdown();
         }
+        updateRefreshTime();
       }, 1000);
+      // 頁面載入時立即顯示一次
+      updateRefreshTime();
       // 點擊刷新時間手動刷新並重置倒數
       document.getElementById("refreshTime").onclick = function () {
         resetCountdown();
@@ -327,9 +332,7 @@
           }
           tr.innerHTML = `<td class='rank-col'>${
             i + 1
-          }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${Math.round(
-            x.balance
-          )}</td><td>${changeCell}</td><td>${updateTimeCell}</td>`;
+          }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${(Math.round(x.balance * 100) / 100).toFixed(2)}</td><td>${changeCell}</td><td>${updateTimeCell}</td>`;
           tbody10.appendChild(tr);
         });
 
@@ -356,9 +359,7 @@
           }
           tr.innerHTML = `<td class='rank-col'>${
             i + 11
-          }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${Math.round(
-            x.balance
-          )}</td><td>${changeCell}</td><td>${updateTimeCell}</td>`;
+          }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${(Math.round(x.balance * 100) / 100).toFixed(2)}</td><td>${changeCell}</td><td>${updateTimeCell}</td>`;
           tbody50.appendChild(tr);
         });
 
@@ -385,9 +386,7 @@
           }
           tr.innerHTML = `<td class='rank-col'>${
             i + 51
-          }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${Math.round(
-            x.balance
-          )}</td><td>${changeCell}</td><td>${updateTimeCell}</td>`;
+          }</td><td style=\"min-width:700px;max-width:900px;word-break:break-all;\">${addrLink}</td><td>${(Math.round(x.balance * 100) / 100).toFixed(2)}</td><td>${changeCell}</td><td>${updateTimeCell}</td>`;
           tbody100.appendChild(tr);
         });
       }
@@ -446,6 +445,13 @@
           }
         }
       });
+
+      // 顯示前100名總持有幣數
+      function updateTop100Total() {
+        const total = addressBalances.slice(0, 100).reduce((a, b) => a + (b.balance || 0), 0);
+        const totalWan = Math.round(total / 10000 * 100) / 100; // 四捨五入到小數點後2位
+        document.getElementById("top100Total").textContent = `（前100合计：${totalWan} 萬）`;
+      }
     </script>
     <!-- 底部紫色版权区块 -->
     <div class="footer-copyright">
