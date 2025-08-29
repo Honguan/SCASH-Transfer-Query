@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 import time
 import traceback
+import subprocess
 from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, SHOW_RESULT, SCAN_INTERVAL, DB_FILE
 
 
