@@ -6,6 +6,8 @@ import sqlite3
 import os
 from datetime import datetime
 import time
+import subprocess
+import shutil
 import traceback
 import subprocess
 from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, SHOW_RESULT, SCAN_INTERVAL, DB_FILE
@@ -277,6 +279,28 @@ def record_address_balance(address, address_balance_set, conn=None):
             address_balance_set.add(address)
             write_address_balance_db(address, balance, conn)
 
+def run_export_dashboard_data():
+    while True:
+        try:
+            subprocess.run(
+                [sys.executable, 'export_dashboard_data.py'], check=True)
+            # 移動 dashboard_data.js 到 assets 目錄
+            src = os.path.join(os.path.dirname(__file__), 'dashboard_data.js')
+            dst_dir = os.path.join(os.path.dirname(__file__), 'assets')
+            dst = os.path.join(dst_dir, 'dashboard_data.js')
+            if os.path.exists(src):
+                # 確保目標資料夾存在
+                os.makedirs(dst_dir, exist_ok=True)
+                shutil.move(src, dst)
+                print(f"dashboard_data.js 已移動到 {dst}")
+            break
+        except Exception as e:
+            print(f"執行 export_dashboard_data.py 發生錯誤: {e}，3秒後重試... (Ctrl+C 可中止)")
+        try:
+            time.sleep(3)
+        except KeyboardInterrupt:
+            print("已中止 export_dashboard_data.py 重試。")
+            break
 
 def auto_query_mode(start_height, end_height=None):
     height = start_height
@@ -302,45 +326,11 @@ def auto_query_mode(start_height, end_height=None):
                 height += 1
                 scanned_count += 1
                 if scanned_count % 10 == 0:
-                    print("\n已掃描10個區塊，自動匯出 dashboard_data.js ...")
-                    import subprocess
-                    import shutil
-                    import os
-                    # 失敗時重試 export_dashboard_data.py，直到成功或手動中斷
-                    while True:
-                        try:
-                            subprocess.run(
-                                [sys.executable, 'export_dashboard_data.py'], check=True)
-                            break
-                        except Exception as e:
-                            print(f"執行 export_dashboard_data.py 發生錯誤: {e}，3秒後重試... (Ctrl+C 可中止)")
-                            try:
-                                time.sleep(3)
-                            except KeyboardInterrupt:
-                                print("已中止 export_dashboard_data.py 重試。")
-                                break
-                    src = os.path.join(os.path.dirname(
-                        __file__), 'dashboard_data.js')
-                    dst_dir = os.path.join(os.path.dirname(__file__), 'assets')
-                    dst = os.path.join(dst_dir, 'dashboard_data.js')
-                    if os.path.exists(src):
-                        shutil.move(src, dst)
-                        print(f"dashboard_data.js 已移動到 {dst}")
+                    run_export_dashboard_data()
             else:
                 print("查詢失敗或查不到，10秒後重試本區塊...")
-                auto_update_all_address_balances()
-                # 失敗時重試 export_dashboard_data.py，直到成功或手動中斷
-                while True:
-                    try:
-                        subprocess.run([sys.executable, 'export_dashboard_data.py'], check=True)
-                        break
-                    except Exception as e:
-                        print(f"執行 export_dashboard_data.py 發生錯誤: {e}，3秒後重試... (Ctrl+C 可中止)")
-                        try:
-                            time.sleep(3)
-                        except KeyboardInterrupt:
-                            print("已中止 export_dashboard_data.py 重試。")
-                            break
+                auto_update_all_address_balances() ## 每次失敗也更新一次地址餘額
+                run_export_dashboard_data() ## 每次失敗也嘗試更新 dashboard_data.js
                 for i in range(10, 0, -1):
                     print(f"  等待 {i:02d} 秒後重試...", end='\r')
                     time.sleep(1)
@@ -494,8 +484,9 @@ def main():
         print("1. 自動查詢模式 (可指定起始/結束區塊高度，直到手動停止)")
         print("2. 手動查詢模式 (輸入區塊高度/地址/TxID)")
         print("3. 設定檔設定模式 (修改 config.py 參數)")
+        print("4. 匯出 dashboard_data.js 檔案")
         print("0. 離開")
-        mode = input("請輸入模式編號 (1/2/3/0): ").strip()
+        mode = input("請輸入模式編號 (1/2/3/4/0): ").strip()
         if mode == "1":
             start = input("請輸入起始區塊高度 (預設 1): ").strip()
             end = input("請輸入結束區塊高度 (留空則查到失敗為止): ").strip()
@@ -506,6 +497,9 @@ def main():
             manual_query_mode()
         elif mode == "3":
             config_setting_mode()
+        elif mode == "4":
+            print("開始匯出 dashboard_data.js ...")
+            run_export_dashboard_data()
         elif mode == "0":
             print("程式結束。")
             break
