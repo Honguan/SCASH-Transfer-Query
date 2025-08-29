@@ -439,7 +439,7 @@
           const txidLink = `<a href='https://scash.one/?search=${x.txid}' target='_blank' rel='noopener'>${txidShort}</a>`;
           const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='text-align:left;display:inline-block;width:100%;'>${x.address}</a>`;
           const amount = (Math.round(x.amount * 100) / 100).toFixed(2);
-          tr.innerHTML = `<td>${blockLink}</td><td>${txidLink}</td><td style='text-align:left;'>${addrLink}</td><td style='text-align:left;'>${amount}</td><td>${x.transfer_time}</td>`;
+          tr.innerHTML = `<td>${blockLink}</td><td>${txidLink}</td><td style='text-align:left;'>${addrLink}</td><td style='text-align:center;'>${amount}</td><td>${x.transfer_time}</td>`;
           tbody.appendChild(tr);
         });
         // 後80筆摺疊
@@ -464,7 +464,7 @@
             const txidLink = `<a href='https://scash.one/?search=${x.txid}' target='_blank' rel='noopener'>${txidShort}</a>`;
             const addrLink = `<a href='https://scash.one/?search=${x.address}' target='_blank' rel='noopener' style='text-align:left;display:inline-block;width:100%;'>${x.address}</a>`;
             const amount = (Math.round(x.amount * 100) / 100).toFixed(2);
-            tr.innerHTML = `<td>${blockLink}</td><td>${txidLink}</td><td style='text-align:left;'>${addrLink}</td><td style='text-align:left;'>${amount}</td><td>${x.transfer_time}</td>`;
+            tr.innerHTML = `<td>${blockLink}</td><td>${txidLink}</td><td style='text-align:left;'>${addrLink}</td><td style='text-align:center;'>${amount}</td><td>${x.transfer_time}</td>`;
             tbody.appendChild(tr);
           });
           // 綁定展開/收合事件
