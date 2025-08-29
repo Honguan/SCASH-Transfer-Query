@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 import time
 import traceback
-from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, CSV_FILE, ADDRESS_BALANCE_FILE, SHOW_RESULT, SCAN_INTERVAL, DB_FILE
+from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, SHOW_RESULT, SCAN_INTERVAL, DB_FILE
 
 
 def init_db():
@@ -254,7 +254,10 @@ def auto_query_mode(start_height, end_height=None):
             if end_height is not None and height > end_height:
                 print("已達結束區塊高度，結束自動查詢模式。")
                 break
-            print(f"\n查詢區塊高度: {height}")
+            if SHOW_RESULT:
+                print(f"\n查詢區塊高度: {height}")
+            else:
+                print(f"查詢區塊高度: {height}", end='\r')
             try:
                 result = process_and_record_block(height, address_balance_set)
             except Exception as e:
@@ -454,7 +457,17 @@ def main():
 
 def config_setting_mode():
     import ast
+    import importlib
     config_path = os.path.join(os.path.dirname(__file__), 'config.py')
+    # 參數說明
+    param_desc = {
+        'BLOCK_HEIGHT': '查詢起始區塊高度',
+        'THRESHOLD': '大額轉帳的閾值（單位：SCASH）',
+        'BASE_URL': 'SCASH 區塊鏈的基礎 URL',
+        'DB_FILE': '資料儲存用 SQLite 檔案名稱',
+        'SHOW_RESULT': '是否顯示查詢結果',
+        'SCAN_INTERVAL': '自動查詢間隔秒數',
+    }
     # 讀取現有設定
     with open(config_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
@@ -472,10 +485,12 @@ def config_setting_mode():
     while True:
         print("\n目前設定：")
         for k, v in config_vars.items():
-            print(f"{k} = {v}")
+            desc = param_desc.get(k, '')
+            print(f"{k}: {desc}\n  當前值 = {v}")
         print("\n可修改參數：")
         for idx, k in enumerate(config_vars.keys(), 1):
-            print(f"{idx}. {k}")
+            desc = param_desc.get(k, '')
+            print(f"{idx}. {k}  {desc}")
         print("0. 儲存並返回主選單")
         sel = input("請輸入要修改的參數編號 (或 0 返回): ").strip()
         if sel == "0":
@@ -485,12 +500,26 @@ def config_setting_mode():
                     if '=' in line and not line.strip().startswith('#'):
                         key = line.split('=', 1)[0].strip()
                         if key in config_vars:
-                            f.write(f"{key} = {repr(config_vars[key])}\n")
+                            comment = f"  # {param_desc.get(key, '')}" if param_desc.get(
+                                key, '') else ''
+                            f.write(
+                                f"{key} = {repr(config_vars[key])}{comment}\n")
                         else:
                             f.write(line)
                     else:
                         f.write(line)
-            print("設定已儲存，返回主選單。\n")
+            print("設定已儲存，重新載入設定檔...\n")
+            # 重新 import config 並更新全域變數
+            import config as _config
+            importlib.reload(_config)
+            global BLOCK_HEIGHT, THRESHOLD, BASE_URL, SHOW_RESULT, SCAN_INTERVAL, DB_FILE
+            BLOCK_HEIGHT = _config.BLOCK_HEIGHT
+            THRESHOLD = _config.THRESHOLD
+            BASE_URL = _config.BASE_URL
+            SHOW_RESULT = _config.SHOW_RESULT
+            SCAN_INTERVAL = _config.SCAN_INTERVAL
+            DB_FILE = _config.DB_FILE
+            print("設定已重新載入。返回主選單。\n")
             break
         try:
             idx = int(sel) - 1
