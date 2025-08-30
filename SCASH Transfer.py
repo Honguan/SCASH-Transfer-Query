@@ -242,8 +242,6 @@ def write_address_balance_db(address, balance, conn=None):
 
 # 自動查詢所有已知地址餘額並自動更新
 def auto_update_all_address_balances():
-    import sys
-    from datetime import datetime
     print("\n自動查詢所有地址餘額...")
     with sqlite3.connect(DB_FILE) as conn:
         c = conn.cursor()
@@ -271,6 +269,8 @@ def auto_update_all_address_balances():
         print()  # 換行
         conn.commit()
         print(f"\n共更新 {updated_count} 個地址餘額。\n")
+    run_export_dashboard_data() 
+        
 
 
 def record_address_balance(address, address_balance_set, conn=None):
@@ -280,6 +280,7 @@ def record_address_balance(address, address_balance_set, conn=None):
         if balance is not None and balance >= THRESHOLD:
             address_balance_set.add(address)
             write_address_balance_db(address, balance, conn)
+
 
 def run_export_dashboard_data():
     while True:
@@ -297,12 +298,14 @@ def run_export_dashboard_data():
                 print(f"dashboard_data.js 已移動到 {dst}")
             break
         except Exception as e:
-            print(f"執行 export_dashboard_data.py 發生錯誤: {e}，3秒後重試... (Ctrl+C 可中止)")
+            print(
+                f"執行 export_dashboard_data.py 發生錯誤: {e}，3秒後重試... (Ctrl+C 可中止)")
         try:
             time.sleep(3)
         except KeyboardInterrupt:
             print("已中止 export_dashboard_data.py 重試。")
             break
+
 
 def auto_query_mode(start_height, end_height=None):
     height = start_height
@@ -331,8 +334,7 @@ def auto_query_mode(start_height, end_height=None):
                     run_export_dashboard_data()
             else:
                 print("查詢失敗或查不到，10秒後重試本區塊...")
-                auto_update_all_address_balances() ## 每次失敗也更新一次地址餘額
-                run_export_dashboard_data() ## 每次失敗也嘗試更新 dashboard_data.js
+                auto_update_all_address_balances()  # 每次失敗也更新一次地址餘額
                 for i in range(10, 0, -1):
                     print(f"  等待 {i:02d} 秒後重試...", end='\r')
                     time.sleep(1)
@@ -384,7 +386,6 @@ def process_and_record_block(block_height, address_balance_set):
                               (txid, block_height, address, amount, time_str))
             conn.commit()
         # 區塊查詢結束後自動查詢所有地址餘額
-        auto_update_all_address_balances()
         return True
     except Exception as e:
         print(f"查詢區塊 {block_height} 發生錯誤: {e}")
@@ -530,29 +531,36 @@ def config_setting_mode():
         'SHOW_RESULT': '是否顯示查詢結果',
         'SCAN_INTERVAL': '自動查詢間隔秒數',
     }
-    # 讀取現有設定
+    # 讀取現有設定與預設值
     with open(config_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
-    # 解析現有設定
     config_vars = {}
+    default_vars = {}
     for line in lines:
         if '=' in line and not line.strip().startswith('#'):
             key, val = line.split('=', 1)
             key = key.strip()
-            val = val.strip().split('#')[0].strip()
+            val_clean = val.strip().split('#')[0].strip()
             try:
-                config_vars[key] = ast.literal_eval(val)
+                config_vars[key] = ast.literal_eval(val_clean)
             except Exception:
-                config_vars[key] = val.strip('"\'')
+                config_vars[key] = val_clean.strip('"\'')
+            # 預設值取等號右側第一個非註解內容
+            try:
+                default_vars[key] = ast.literal_eval(val_clean)
+            except Exception:
+                default_vars[key] = val_clean.strip('"\'')
     while True:
         print("\n目前設定：")
         for k, v in config_vars.items():
             desc = param_desc.get(k, '')
-            print(f"{k}: {desc}\n  當前值 = {v}")
+            default_val = default_vars.get(k, '')
+            print(f"{k}: {desc}\n  當前值 = {v}  (預設值: {default_val})")
         print("\n可修改參數：")
         for idx, k in enumerate(config_vars.keys(), 1):
             desc = param_desc.get(k, '')
-            print(f"{idx}. {k}  {desc}")
+            default_val = default_vars.get(k, '')
+            print(f"{idx}. {k}  {desc}  (預設值: {default_val})")
         print("0. 儲存並返回主選單")
         sel = input("請輸入要修改的參數編號 (或 0 返回): ").strip()
         if sel == "0":
@@ -591,11 +599,16 @@ def config_setting_mode():
             key = list(config_vars.keys())[idx]
             new_val = input(
                 f"請輸入新的值 ({key}，目前值: {config_vars[key]}): ").strip()
+            if new_val == "":
+                print("空值，已維持原本設定。")
+                continue
             # 嘗試自動型別轉換
             try:
-                config_vars[key] = ast.literal_eval(new_val)
+                val = ast.literal_eval(new_val)
+                config_vars[key] = val
             except Exception:
-                config_vars[key] = new_val
+                print("格式錯誤，已維持原本設定。")
+                continue
         except Exception:
             print("輸入錯誤，請重新輸入。")
 
