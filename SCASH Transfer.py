@@ -12,7 +12,7 @@ import traceback
 import subprocess
 import ast
 import importlib
-from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, SHOW_RESULT, SCAN_INTERVAL, DB_FILE
+from config import BLOCK_HEIGHT, THRESHOLD, BASE_URL, SHOW_RESULT, SCAN_INTERVAL, DB_FILE, SCAN_TRUE
 
 
 def init_db():
@@ -269,8 +269,7 @@ def auto_update_all_address_balances():
         print()  # 換行
         conn.commit()
         print(f"\n共更新 {updated_count} 個地址餘額。\n")
-    run_export_dashboard_data() 
-        
+    run_export_dashboard_data()
 
 
 def record_address_balance(address, address_balance_set, conn=None):
@@ -334,7 +333,9 @@ def auto_query_mode(start_height, end_height=None):
                     run_export_dashboard_data()
             else:
                 print("查詢失敗或查不到，10秒後重試本區塊...")
-                auto_update_all_address_balances()  # 每次失敗也更新一次地址餘額
+                # 根據設定決定是否自動查詢所有地址餘額
+                if SCAN_TRUE:
+                    auto_update_all_address_balances()  # 更新一次地址餘額
                 for i in range(10, 0, -1):
                     print(f"  等待 {i:02d} 秒後重試...", end='\r')
                     time.sleep(1)
@@ -360,9 +361,13 @@ def process_and_record_block(block_height, address_balance_set):
             if SHOW_RESULT:
                 print(
                     f"總轉帳金額 {total_amount} SCASH 未達閾值 {THRESHOLD} SCASH，跳過後續查詢。")
+            else:
+                print(f"區塊高度: {block_height}", end='\r')
             return True
         if SHOW_RESULT:
             print(f"區塊高度: {block_height}")
+        else:
+            print(f"區塊高度: {block_height}", end='\r')
         txids = find_txids_by_amount(soup, total_amount)
         if not txids:
             if SHOW_RESULT:
@@ -385,7 +390,6 @@ def process_and_record_block(block_height, address_balance_set):
                                  VALUES (?, ?, ?, ?, ?)''',
                               (txid, block_height, address, amount, time_str))
             conn.commit()
-        # 區塊查詢結束後自動查詢所有地址餘額
         return True
     except Exception as e:
         print(f"查詢區塊 {block_height} 發生錯誤: {e}")
@@ -530,6 +534,7 @@ def config_setting_mode():
         'DB_FILE': '資料儲存用 SQLite 檔案名稱',
         'SHOW_RESULT': '是否顯示查詢結果',
         'SCAN_INTERVAL': '自動查詢間隔秒數',
+        'SCAN_TRUE': '自動查詢模式是否自動更新所有地址餘額'
     }
     # 讀取現有設定與預設值
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -582,13 +587,14 @@ def config_setting_mode():
             # 重新 import config 並更新全域變數
             import config as _config
             importlib.reload(_config)
-            global BLOCK_HEIGHT, THRESHOLD, BASE_URL, SHOW_RESULT, SCAN_INTERVAL, DB_FILE
+            global BLOCK_HEIGHT, THRESHOLD, BASE_URL, SHOW_RESULT, SCAN_INTERVAL, DB_FILE, SCAN_TRUE
             BLOCK_HEIGHT = _config.BLOCK_HEIGHT
             THRESHOLD = _config.THRESHOLD
             BASE_URL = _config.BASE_URL
             SHOW_RESULT = _config.SHOW_RESULT
             SCAN_INTERVAL = _config.SCAN_INTERVAL
             DB_FILE = _config.DB_FILE
+            SCAN_TRUE = _config.SCAN_TRUE
             print("設定已重新載入。返回主選單。\n")
             break
         try:
